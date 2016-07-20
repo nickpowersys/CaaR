@@ -106,7 +106,7 @@ OUTSIDE_DEGREES = parser['df_column_names']['OUTSIDE_DEGREES']
 
 # Directory
 if parser['test_files']['TEST_DIR'] == '':
-    TEST_DIR = os.path.abspath('../data')
+    TEST_DIR = os.path.abspath('../tests/data')
 else:
     TEST_DIR = parser['test_files']['TEST_DIR']
 
@@ -122,9 +122,11 @@ LOCATION_IDS = set([LOCATION_ID1, LOCATION_ID2])
 STATE = parser['test_ids_and_states']['STATE']
 
 # File names
-CYCLES_FILE = os.path.join(TEST_DIR, parser['test_files']['CYCLES_FILE'])
-INSIDE_FILE = os.path.join(TEST_DIR, parser['test_files']['INSIDE_FILE'])
-OUTSIDE_FILE = os.path.join(TEST_DIR, parser['test_files']['OUTSIDE_FILE'])
+TEST_CYCLES_FILE = os.path.join(TEST_DIR, parser['test_files']['TEST_CYCLES_FILE'])
+TEST_INSIDE_FILE = os.path.join(TEST_DIR, parser['test_files']['TEST_INSIDE_FILE'])
+TEST_OUTSIDE_FILE = os.path.join(TEST_DIR, parser['test_files']['TEST_OUTSIDE_FILE'])
+TEST_THERMOSTATS_FILE = os.path.join(TEST_DIR, parser['test_files']['TEST_THERMOSTATS_FILE'])
+TEST_POSTAL_FILE = os.path.join(TEST_DIR, parser['test_files']['TEST_POSTAL_FILE'])
 
 CYCLES_PICKLE_FILE = os.path.join(TEST_DIR, parser['test_pickle_files']['CYCLES_PICKLE_FILE'])
 INSIDE_PICKLE_FILE = os.path.join(TEST_DIR, parser['test_pickle_files']['INSIDE_PICKLE_FILE'])

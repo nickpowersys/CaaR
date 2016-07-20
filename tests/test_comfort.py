@@ -10,11 +10,12 @@ from comfort import history as hi
 from comfort import histdaily as hd
 from comfort import histsummary as hs
 
-from comfort.configparser_read import CYCLES_FILE, CYCLES_PICKLE_FILE, \
+from comfort.configparser_read import TEST_CYCLES_FILE, CYCLES_PICKLE_FILE, \
     THERMO_IDS, INSIDE_PICKLE_FILE, OUTSIDE_PICKLE_FILE, LOCATION_IDS,     \
-    THERMOSTATS_FILE, STATE, POSTAL_FILE, CYCLE_TYPE_COOL, INSIDE_FILE,    \
-    OUTSIDE_FILE, ALL_STATES_CYCLES_PICKLED, ALL_STATES_INSIDE_PICKLED,    \
-    ALL_STATES_OUTSIDE_PICKLED, THERMO_ID1, LOCATION_ID1
+    TEST_THERMOSTATS_FILE, STATE, TEST_POSTAL_FILE, CYCLE_TYPE_COOL, \
+    TEST_INSIDE_FILE, TEST_OUTSIDE_FILE, ALL_STATES_CYCLES_PICKLED, \
+    ALL_STATES_INSIDE_PICKLED, ALL_STATES_OUTSIDE_PICKLED, THERMO_ID1, \
+    LOCATION_ID1
 
 slow = pytest.mark.skipif(
     not pytest.config.getoption("--runslow"),
@@ -30,7 +31,7 @@ def tmpdir():
 
 @pytest.fixture(scope="module")
 def cycle_file_fixture():
-    return CYCLES_FILE
+    return TEST_CYCLES_FILE
 
 
 @pytest.fixture(scope="module")
@@ -50,12 +51,12 @@ def outside_df_fixture():
 
 @pytest.fixture(scope="module")
 def thermostats_fixture():
-    return THERMOSTATS_FILE
+    return TEST_THERMOSTATS_FILE
 
 
 @pytest.fixture(scope="module")
 def postal_fixture():
-    return POSTAL_FILE
+    return TEST_POSTAL_FILE
 
 
 @pytest.fixture(scope="module")
@@ -63,17 +64,20 @@ def state_fixture():
     return [STATE]
 
 
-@slow
+
 @pytest.mark.parametrize("data_file, states, thermostats, postal, cycle",
-                         [(CYCLES_FILE, STATE, THERMOSTATS_FILE,
-                           POSTAL_FILE, CYCLE_TYPE_COOL),
-                          (CYCLES_FILE, None, None, None, CYCLE_TYPE_COOL),
-                          (INSIDE_FILE, STATE, THERMOSTATS_FILE,
-                           POSTAL_FILE, CYCLE_TYPE_COOL),
-                          (INSIDE_FILE, None, None, None, CYCLE_TYPE_COOL),
-                          (OUTSIDE_FILE, STATE, THERMOSTATS_FILE,
-                           POSTAL_FILE, CYCLE_TYPE_COOL),
-                          (OUTSIDE_FILE, None, None, None, CYCLE_TYPE_COOL)])
+                         [(TEST_CYCLES_FILE, STATE, TEST_THERMOSTATS_FILE,
+                           TEST_POSTAL_FILE, CYCLE_TYPE_COOL),
+                          (TEST_CYCLES_FILE, None, None, None, CYCLE_TYPE_COOL),
+                          (TEST_CYCLES_FILE, STATE, TEST_THERMOSTATS_FILE,
+                           TEST_POSTAL_FILE, CYCLE_TYPE_COOL),
+                          (TEST_INSIDE_FILE, STATE, TEST_THERMOSTATS_FILE,
+                           TEST_POSTAL_FILE, CYCLE_TYPE_COOL),
+                          (TEST_INSIDE_FILE, None, None, None, CYCLE_TYPE_COOL),
+                          (TEST_OUTSIDE_FILE, STATE, TEST_THERMOSTATS_FILE,
+                           TEST_POSTAL_FILE, CYCLE_TYPE_COOL),
+                          (TEST_OUTSIDE_FILE, None, None, None,
+                           CYCLE_TYPE_COOL)])
 def test_select_clean(data_file, states, thermostats, postal, cycle):
     with open(data_file) as f:
         header = ct._parse_line(f.readline())
@@ -85,24 +89,24 @@ def test_select_clean(data_file, states, thermostats, postal, cycle):
 
 @slow
 @pytest.mark.parametrize("data_file, states_to_clean, expected_path, thermostats, postal",
-                         [(CYCLES_FILE, STATE, CYCLES_PICKLE_FILE,
-                           THERMOSTATS_FILE, POSTAL_FILE),
-                          (CYCLES_FILE, None, ALL_STATES_CYCLES_PICKLED,
+                         [(TEST_CYCLES_FILE, STATE, CYCLES_PICKLE_FILE,
+                           TEST_THERMOSTATS_FILE, TEST_POSTAL_FILE),
+                          (TEST_CYCLES_FILE, None, ALL_STATES_CYCLES_PICKLED,
                            None, None),
-                          (INSIDE_FILE, STATE, INSIDE_PICKLE_FILE,
-                           THERMOSTATS_FILE, POSTAL_FILE),
-                          (INSIDE_FILE, None, ALL_STATES_INSIDE_PICKLED,
+                          (TEST_INSIDE_FILE, STATE, INSIDE_PICKLE_FILE,
+                           TEST_THERMOSTATS_FILE, TEST_POSTAL_FILE),
+                          (TEST_INSIDE_FILE, None, ALL_STATES_INSIDE_PICKLED,
                            None, None),
-                          (OUTSIDE_FILE, STATE, OUTSIDE_PICKLE_FILE,
-                           THERMOSTATS_FILE, POSTAL_FILE),
-                          (OUTSIDE_FILE, None, ALL_STATES_OUTSIDE_PICKLED,
+                          (TEST_OUTSIDE_FILE, STATE, OUTSIDE_PICKLE_FILE,
+                           TEST_THERMOSTATS_FILE, TEST_POSTAL_FILE),
+                          (TEST_OUTSIDE_FILE, None, ALL_STATES_OUTSIDE_PICKLED,
                            None, None)])
 def test_pickle_cycles_inside(tmpdir, data_file, states_to_clean, expected_path,
                               thermostats, postal):
     filename = tmpdir.join(ct.pickle_filename(data_file, states_to_clean))
     pickle_path = ct.pickle_from_file(filename, data_file, states=states_to_clean,
-                                      thermostats_file=thermostats,
-                                      postal_file=postal)
+                                      TEST_THERMOSTATS_FILE=thermostats,
+                                      TEST_POSTAL_FILE=postal)
     pickle_file = os.path.basename(pickle_path)
     assert pickle_file == os.path.basename(expected_path)
 
