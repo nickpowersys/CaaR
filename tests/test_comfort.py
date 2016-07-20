@@ -1,0 +1,281 @@
+import datetime as dt
+import os.path
+import numpy as np
+import pandas as pd
+import py
+import pytest
+
+from comfort import cleanthermostat as ct
+from comfort import history as hi
+from comfort import histdaily as hd
+from comfort import histsummary as hs
+
+from comfort.configparser_read import CYCLES_FILE, CYCLES_PICKLE_FILE, \
+    THERMO_IDS, INSIDE_PICKLE_FILE, OUTSIDE_PICKLE_FILE, LOCATION_IDS,     \
+    THERMOSTATS_FILE, STATE, POSTAL_FILE, CYCLE_TYPE_COOL, INSIDE_FILE,    \
+    OUTSIDE_FILE, ALL_STATES_CYCLES_PICKLED, ALL_STATES_INSIDE_PICKLED,    \
+    ALL_STATES_OUTSIDE_PICKLED, THERMO_ID1, LOCATION_ID1
+
+slow = pytest.mark.skipif(
+    not pytest.config.getoption("--runslow"),
+    reason="need --runslow option to run"
+)
+
+
+@pytest.fixture(scope="module")
+def tmpdir():
+    tempdir = py.path.local.mkdtemp(rootdir=None)
+    return tempdir
+
+
+@pytest.fixture(scope="module")
+def cycle_file_fixture():
+    return CYCLES_FILE
+
+
+@pytest.fixture(scope="module")
+def cycle_df_fixture():
+    return hi.create_cycles_df(CYCLES_PICKLE_FILE, thermo_ids=THERMO_IDS)
+
+
+@pytest.fixture(scope="module")
+def inside_df_fixture():
+    return hi.create_inside_df(INSIDE_PICKLE_FILE, thermo_ids=THERMO_IDS)
+
+
+@pytest.fixture(scope="module")
+def outside_df_fixture():
+    return hi.create_outside_df(OUTSIDE_PICKLE_FILE, location_ids=LOCATION_IDS)
+
+
+@pytest.fixture(scope="module")
+def thermostats_fixture():
+    return THERMOSTATS_FILE
+
+
+@pytest.fixture(scope="module")
+def postal_fixture():
+    return POSTAL_FILE
+
+
+@pytest.fixture(scope="module")
+def state_fixture():
+    return [STATE]
+
+
+@slow
+@pytest.mark.parametrize("data_file, states, thermostats, postal, cycle",
+                         [(CYCLES_FILE, STATE, THERMOSTATS_FILE,
+                           POSTAL_FILE, CYCLE_TYPE_COOL),
+                          (CYCLES_FILE, None, None, None, CYCLE_TYPE_COOL),
+                          (INSIDE_FILE, STATE, THERMOSTATS_FILE,
+                           POSTAL_FILE, CYCLE_TYPE_COOL),
+                          (INSIDE_FILE, None, None, None, CYCLE_TYPE_COOL),
+                          (OUTSIDE_FILE, STATE, THERMOSTATS_FILE,
+                           POSTAL_FILE, CYCLE_TYPE_COOL),
+                          (OUTSIDE_FILE, None, None, None, CYCLE_TYPE_COOL)])
+def test_select_clean(data_file, states, thermostats, postal, cycle):
+    with open(data_file) as f:
+        header = ct._parse_line(f.readline())
+        clean_dict = ct._dict_from_lines_of_text(f, header, states=states, thermostats_file=thermostats,
+                                                 postal_file=postal, cycle=cycle)
+        assert isinstance(clean_dict, dict)
+        assert len(clean_dict) > 0
+
+
+@slow
+@pytest.mark.parametrize("data_file, states_to_clean, expected_path, thermostats, postal",
+                         [(CYCLES_FILE, STATE, CYCLES_PICKLE_FILE,
+                           THERMOSTATS_FILE, POSTAL_FILE),
+                          (CYCLES_FILE, None, ALL_STATES_CYCLES_PICKLED,
+                           None, None),
+                          (INSIDE_FILE, STATE, INSIDE_PICKLE_FILE,
+                           THERMOSTATS_FILE, POSTAL_FILE),
+                          (INSIDE_FILE, None, ALL_STATES_INSIDE_PICKLED,
+                           None, None),
+                          (OUTSIDE_FILE, STATE, OUTSIDE_PICKLE_FILE,
+                           THERMOSTATS_FILE, POSTAL_FILE),
+                          (OUTSIDE_FILE, None, ALL_STATES_OUTSIDE_PICKLED,
+                           None, None)])
+def test_pickle_cycles_inside(tmpdir, data_file, states_to_clean, expected_path,
+                              thermostats, postal):
+    filename = tmpdir.join(ct.pickle_filename(data_file, states_to_clean))
+    pickle_path = ct.pickle_from_file(filename, data_file, states=states_to_clean,
+                                      thermostats_file=thermostats,
+                                      postal_file=postal)
+    pickle_file = os.path.basename(pickle_path)
+    assert pickle_file == os.path.basename(expected_path)
+
+
+@slow
+@pytest.mark.parametrize("pickle_file, df_creation_func, id_type, ids",
+                         [(CYCLES_PICKLE_FILE, hi.create_cycles_df,
+                           'thermo_ids', set([THERMO_ID1])),
+                          (CYCLES_PICKLE_FILE, hi.create_cycles_df, None, None),
+                          (INSIDE_PICKLE_FILE, hi.create_inside_df,
+                           'thermo_ids', set([THERMO_ID1])),
+                          (INSIDE_PICKLE_FILE, hi.create_inside_df, None, None),
+                          (OUTSIDE_PICKLE_FILE, hi.create_outside_df,
+                           'location_ids', set([LOCATION_ID1])),
+                          (OUTSIDE_PICKLE_FILE, hi.create_outside_df, None, None)])
+def test_df_creation(pickle_file, df_creation_func, id_type, ids):
+    kwargs = {}
+    if id_type is not None:
+        kwargs[id_type] = ids
+    df = df_creation_func(pickle_file, **kwargs)
+    assert isinstance(df, pd.DataFrame)
+
+
+@slow
+@pytest.mark.parametrize("df_fixture, id, start, end, freq",
+                         [(cycle_df_fixture(), THERMO_ID1, dt.datetime(2012, 6, 18, 21, 0, 0),
+                           dt.datetime(2012, 6, 18, 23, 0, 0), '1min30s'),
+                          (cycle_df_fixture(), THERMO_ID1, dt.datetime(2012, 6, 18, 21, 0, 0),
+                           dt.datetime(2012, 6, 18, 23, 0, 0), 'min30s'),
+                          (cycle_df_fixture(), THERMO_ID1, dt.datetime(2012, 6, 18, 21, 0, 0),
+                           dt.datetime(2012, 6, 18, 23, 0, 0), '2min'),
+                          (cycle_df_fixture(), THERMO_ID1, dt.datetime(2012, 6, 18, 21, 0, 0),
+                           dt.datetime(2012, 6, 18, 23, 0, 0), 'min')])
+def test_on_off_status_by_interval(df_fixture, id, start, end, freq):
+    kwargs = {'freq': freq}
+    on_off = hd.on_off_status(df_fixture, id, start, end, **kwargs)
+    assert len(on_off['times']) > 0
+
+
+@slow
+@pytest.mark.parametrize("df_fixture, id, start, end, freq",
+                         [(inside_df_fixture(), THERMO_ID1, dt.datetime(2012, 6, 18, 21, 0, 0),
+                           dt.datetime(2012, 6, 18, 23, 0, 0), '1min30s'),
+                          (inside_df_fixture(), THERMO_ID1, dt.datetime(2012, 6, 18, 21, 0, 0),
+                           dt.datetime(2012, 6, 18, 23, 0, 0), 'min30s'),
+                          (inside_df_fixture(), THERMO_ID1, dt.datetime(2012, 6, 18, 21, 0, 0),
+                           dt.datetime(2012, 6, 18, 23, 0, 0), '2min'),
+                          (inside_df_fixture(), THERMO_ID1, dt.datetime(2012, 6, 18, 21, 0, 0),
+                           dt.datetime(2012, 6, 18, 23, 0, 0), 'min'),
+                          (outside_df_fixture(), LOCATION_ID1, dt.datetime(2012, 6, 18, 21, 0, 0),
+                           dt.datetime(2012, 6, 18, 23, 0, 0), '1min30s'),
+                          (outside_df_fixture(), LOCATION_ID1, dt.datetime(2012, 6, 18, 21, 0, 0),
+                           dt.datetime(2012, 6, 18, 23, 0, 0), 'min30s'),
+                          (outside_df_fixture(), LOCATION_ID1, dt.datetime(2012, 6, 18, 21, 0, 0),
+                           dt.datetime(2012, 6, 18, 23, 0, 0), '2min'),
+                          (outside_df_fixture(), LOCATION_ID1, dt.datetime(2012, 6, 18, 21, 0, 0),
+                           dt.datetime(2012, 6, 18, 23, 0, 0), 'min')])
+def test_temps_by_interval(df_fixture, id, start, end, freq):
+    kwargs = {'freq': freq}
+    temps = hd._raw_temp_arr_by_freq(df_fixture, id, start, end, **kwargs)
+    assert len(temps['times']) > 0
+
+
+@slow
+@pytest.mark.parametrize("thermo_id, start, end, freq, cycle_df, inside_df, outside_df",
+                         [(THERMO_ID1, dt.datetime(2012, 6, 18, 21, 0, 0),
+                           dt.datetime(2012, 6, 19, 20, 59, 0), '1min',
+                           cycle_df_fixture(), inside_df_fixture(),
+                           outside_df_fixture())])
+def test_single_day_cycling_and_temps(thermo_id, start, end, freq, cycle_df,
+                                      inside_df, outside_df):
+    single_day_arr = hd.single_day_cycling_and_temps(thermo_id, start, end, freq, cycle_df,
+                                                     inside_df, outside_df)
+    assert isinstance(single_day_arr[0], np.ndarray)
+    assert isinstance(single_day_arr[1], np.ndarray)
+    assert single_day_arr[1].shape[1] == 3
+
+
+@slow
+@pytest.mark.parametrize("df, id, minimum_records",
+                         [(inside_df_fixture(), None, 2),
+                          (inside_df_fixture(), THERMO_ID1, 1)])
+def test_min_and_max_indoor_temp_by_id(df, id, minimum_records):
+    if id is None:
+        min_max_df = hd.min_and_max_indoor_temp_by_id(df)
+        assert len(min_max_df.index) >= minimum_records
+    elif id is not None:
+        min_max_df = hd.min_and_max_indoor_temp_by_id(df, id=id)
+        assert np.int64(id) in list(min_max_df.index)
+        assert len(min_max_df.index) == minimum_records
+
+
+@slow
+@pytest.mark.parametrize("df, id, minimum_records",
+                         [(outside_df_fixture(), None, 2),
+                          (outside_df_fixture(), LOCATION_ID1, 1)])
+def test_min_and_max_outdoor_temp_by_id(df, id, minimum_records):
+    if id is None:
+        min_max_df = hd.min_and_max_outdoor_temp_by_id(df)
+    elif id is not None:
+        min_max_df = hd.min_and_max_outdoor_temp_by_id(df, id=id)
+        for thermo_id in list(min_max_df.index):
+            assert hd.location_id_of_thermo(thermo_id) == id
+    assert len(min_max_df.index) >= minimum_records
+
+
+@slow
+@pytest.mark.parametrize("min_s_string, pd_timedelta",
+                         [('1min30s', pd.Timedelta(dt.timedelta(seconds=90))),
+                          ('min30s', pd.Timedelta(dt.timedelta(seconds=90))),
+                          ('2min', pd.Timedelta(dt.timedelta(seconds=120))),
+                          ('min', pd.Timedelta(dt.timedelta(seconds=60)))])
+def test_timedelta_from_string(min_s_string, pd_timedelta):
+    assert hd.timedelta_from_string(min_s_string) == pd_timedelta
+
+
+@slow
+@pytest.mark.parametrize("df_fixture",
+                         [cycle_df_fixture(),
+                          inside_df_fixture(),
+                          outside_df_fixture()])
+def test_first_full_day_df(df_fixture):
+    day = ct.start_of_first_full_day_df(df_fixture)
+    assert isinstance(day, dt.date)
+
+
+@slow
+@pytest.mark.parametrize("df_fixture",
+                         [cycle_df_fixture(),
+                          inside_df_fixture(),
+                          outside_df_fixture()])
+def test_last_full_day_df(df_fixture):
+    day = ct.start_of_last_full_day_df(df_fixture)
+    assert isinstance(day, dt.date)
+
+
+@slow
+def test_cooling_df(cycle_df_fixture):
+    cool_df = ct.cooling_df(cycle_df_fixture)
+    assert isinstance(cool_df, pd.DataFrame)
+
+
+@slow
+def test_date_interval_stamps():
+    first_day = dt.datetime(2011, 1, 1, 1, 1)
+    last_day = dt.datetime(2011, 1, 2, 1, 1)
+    number_of_intervals = ct.date_range_for_data(first_day, last_day,
+                                                 frequency='m')
+    number_of_days = (last_day - first_day +
+                      pd.Timedelta(days=1))/np.timedelta64(1, 'D')
+    intervals_per_day = number_of_intervals / number_of_days
+    assert ct.interval_stamps(first_day, last_day, number_of_days,
+                              intervals_per_day).size == 2*24*60
+
+@slow
+def test_date_range_for_data(cycle_df_fixture):
+    first_day = ct.start_of_first_full_day_df(cycle_df_fixture)
+    last_day = ct.start_of_last_full_day_df(cycle_df_fixture)
+    date_range = ct.date_range_for_data(first_day, last_day, frequency='m')
+    assert isinstance(date_range, int)
+
+
+@slow
+def test_thermostat_locations_df(thermostats_fixture, postal_fixture):
+    df = ct._thermostats_states(thermostats_fixture, postal_fixture)
+    assert isinstance(df, pd.DataFrame)
+
+@slow
+def test_intervals_since_epoch():
+    now_fixture = dt.datetime(2011, 1, 1, 1, 1)
+    assert ct.intervals_since_epoch(now_fixture, frequency='D') == 14975
+    assert ct.intervals_since_epoch(now_fixture) == 14975*24*60
+
+@slow
+def test_thermostats_from_state(thermostats_fixture, postal_fixture, state_fixture):
+    assert 24 in ct.thermostats_from_states(thermostats_fixture, postal_fixture, state_fixture)
