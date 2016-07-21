@@ -1,4 +1,5 @@
 import datetime as dt
+import os.path
 import pickle
 from collections import namedtuple
 
@@ -372,7 +373,10 @@ def _zip_codes_in_states(postal_file, states):
      """
     zip_code = POSTAL_FILE_ZIP
     dtype_zip_code = {zip_code: 'str'}
-    zips_default_index_df = pd.read_csv(postal_file, dtype=dtype_zip_code)
+    if os.path.splitext(postal_file)[1] == '.csv':
+        zips_default_index_df = pd.read_csv(postal_file, dtype=dtype_zip_code)
+    else:
+        zips_default_index_df = pd.read_table(postal_file, dtype=dtype_zip_code)
     zips_default_index_df[zip_code] = zips_default_index_df[zip_code]\
         .str.pad(5, side='left', fillchar='0')
     zips_unfiltered_df = zips_default_index_df.set_index([zip_code])
@@ -385,8 +389,12 @@ def _thermostats_df(thermostats_file):
     """Return pandas dataframe of thermostat metadata from raw file."""
     zip_code = THERMOSTAT_ZIP_CODE
     dtype_thermostat_zip = {zip_code: 'str'}
-    thermos_df = pd.read_csv(thermostats_file, index_col=0,
-                             dtype=dtype_thermostat_zip)
+    if os.path.splitext(postal_file)[1] == '.csv':
+        thermos_df = pd.read_csv(thermostats_file, index_col=0,
+                                 dtype=dtype_thermostat_zip)
+    else:
+        thermos_df = pd.read_table(thermostats_file, index_col=0,
+                                 dtype=dtype_thermostat_zip)
     thermos_df[zip_code] = thermos_df[zip_code].str.pad(5, side='left',
                                                         fillchar='0')
     return thermos_df
