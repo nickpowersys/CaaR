@@ -1,7 +1,7 @@
 import os.path
 import click
-import cleanthermostat as ct
-from comfort.configparser_read import THERMOSTATS_FILE, POSTAL_FILE,      \
+import caar.cleanthermostat as ct
+from caar.configparser_read import THERMOSTATS_FILE, POSTAL_FILE,      \
     DATA_DIR
 
 

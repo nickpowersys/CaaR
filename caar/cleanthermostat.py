@@ -6,7 +6,7 @@ from collections import namedtuple
 import numpy as np
 import pandas as pd
 
-from comfort.configparser_read import UNIQUE_CYCLE_FIELD_INDEX,      \
+from caar.configparser_read import UNIQUE_CYCLE_FIELD_INDEX,             \
     UNIQUE_OUTSIDE_FIELD, INSIDE_FIELDS, CYCLE_FIELDS, OUTSIDE_FIELDS,   \
     THERMOSTAT_LOCATION_ID, THERMOSTAT_ZIP_CODE, POSTAL_FILE_ZIP,        \
     POSTAL_TWO_LETTER_STATE, CYCLE_TYPE_INDEX, CYCLE_START_INDEX,        \

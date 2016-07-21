@@ -6,7 +6,7 @@ from collections import namedtuple
 import pandas as pd
 
 
-from comfort.configparser_read import INSIDE_DEVICE_ID,                      \
+from caar.configparser_read import INSIDE_DEVICE_ID,                         \
     INSIDE_LOG_DATE, INSIDE_DEGREES, CYCLE_DEVICE_ID, CYCLE_START_TIME,      \
     CYCLE_END_TIME, OUTSIDE_LOCATION_ID, OUTSIDE_LOG_DATE, OUTSIDE_DEGREES
 
