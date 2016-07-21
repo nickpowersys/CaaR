@@ -360,7 +360,7 @@ def _thermostats_states(**kwargs):
     postal_file = kwargs.get('postal_file')
     states = (kwargs.get('states')).split(',')
     zip_codes_df = _zip_codes_in_states(postal_file, states)
-    thermos_df = _thermostats_df(kwargs.get('thermostats_file'))
+    thermos_df = _thermostats_df(kwargs.get('thermostats_file'), postal_file)
     thermostats_states_df = pd.merge(thermos_df, zip_codes_df, how='inner',
                                      left_on=THERMOSTAT_ZIP_CODE,
                                      right_index=True)
@@ -385,8 +385,10 @@ def _zip_codes_in_states(postal_file, states):
     return zip_codes_df
 
 
-def _thermostats_df(thermostats_file):
+def _thermostats_df(thermostats_file, postal_file):
     """Return pandas dataframe of thermostat metadata from raw file."""
+    print('thermostats_df postal_file')
+    print(postal_file)
     zip_code = THERMOSTAT_ZIP_CODE
     dtype_thermostat_zip = {zip_code: 'str'}
     if os.path.splitext(postal_file)[1] == '.csv':
