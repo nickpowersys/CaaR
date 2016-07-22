@@ -16,6 +16,14 @@ This project is intended to accelerate analysis of timestamped data including th
 
 ## Installation and How to Start Using
 
+### Dependencies
+
+* NumPy
+* SciPy
+* pandas
+* py
+* click
+
 The repository may be cloned, and given that the first set of functions in cleanthermostat.py deals with reading comma- or tab-delimited text files, it will be easiest to begin using the project by reviewing the sample input files in the data directory. This is the default directory for data files. To use data columns that are not exactly like those in the sample input files, the config.ini file can be edited to indicate each of the data columns, as long as the first column is a numeric ID.
 
 The script in picklert.py can be run from the command line in order to initiate the process of reading data files. Detailed instructions are given in the leading source code comment of picklert.py itself.
