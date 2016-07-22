@@ -1,15 +1,8 @@
 from setuptools import find_packages, setup
-import codecs
-import os
+from pkg_resources import Requirement, resource_filename
 
 
-here = os.path.abspath(os.path.dirname(__file__))
-
-def read(*parts):
-    # intentionally *not* adding an encoding option to open
-    return codecs.open(os.path.join(here, *parts), 'r').read()
-
-long_description = read('README.md')
+conf_file = resource_filename(Requirement.parse("caar"),"config.ini")
 
 
 setup(
@@ -19,16 +12,19 @@ setup(
     license='BSD 3-Clause License',
     author='Nicholas A. Brown',
     tests_require=['pytest'],
-    install_requires=['numpy',
-                      'pandas',
-                      'scipy',
-                      'click',
-                      'py'
+    install_requires=['numpy>=1.11.1',
+                      'pandas>=0.18.1',
+                      'scipy>=0.17.1',
+                      'click>=6.6',
+                      'py>=1.4.31'
                     ],
     author_email='nbprofessional@gmail.com',
     description='Accelerating analysis of data on temperatures and thermostat-driven loads.',
-    long_description=long_description,
-    packages=find_packages(exclude=['_drafted.py', 'histdaily.py', 'histsummary.py']),
+    packages=find_packages(),
+    package_data={
+      'caar': ['./config.ini'],
+      'data': ['*.csv']
+    },
     include_package_data=True,
     platforms='any',
     classifiers = [

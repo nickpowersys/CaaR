@@ -1,2 +1,6 @@
-include *.csv
-prune tests
+include caar/*.ini
+include data/*.csv
+include tests/data/*.csv
+prune caar/_drafted.py
+prune caar/histdaily.py
+prune caar/histsummary.py
