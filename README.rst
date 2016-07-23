@@ -20,7 +20,7 @@ Installation and How to Start Using
 ===================================
 
 Dependencies:
-
+* Python 3.4+
 * NumPy
 * SciPy
 * pandas

@@ -18,6 +18,7 @@ This project is intended to accelerate analysis of timestamped data including th
 
 ### Dependencies
 
+* Python 3.4
 * NumPy
 * SciPy
 * pandas
