@@ -5,12 +5,12 @@ import pandas as pd
 import py
 import pytest
 
-from comfort import cleanthermostat as ct
-from comfort import history as hi
-from comfort import histdaily as hd
-from comfort import histsummary as hs
+from caar import cleanthermostat as ct
+from caar import history as hi
+from caar import histdaily as hd
+from caar import histsummary as hs
 
-from comfort.configparser_read import TEST_CYCLES_FILE, CYCLES_PICKLE_FILE, \
+from caar.configparser_read import TEST_CYCLES_FILE, CYCLES_PICKLE_FILE, \
     THERMO_IDS, INSIDE_PICKLE_FILE, OUTSIDE_PICKLE_FILE, LOCATION_IDS,     \
     TEST_THERMOSTATS_FILE, STATE, TEST_POSTAL_FILE, CYCLE_TYPE_COOL, \
     TEST_INSIDE_FILE, TEST_OUTSIDE_FILE, ALL_STATES_CYCLES_PICKLED, \
