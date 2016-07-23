@@ -16,12 +16,12 @@ Inside = namedtuple('Inside', ['thermo_id', 'log_date'])
 Outside = namedtuple('Outside', ['location_id', 'log_date'])
 
 
-def create_inside_df(pickled_inside_file, thermo_ids=None):
-    """Returns pandas dataframe containing thermostat id, time stamps and
+def create_inside_df(dict_or_pickle_file, thermo_ids=None):
+    """Returns pandas DataFrame containing thermostat id, time stamps and
     inside temperatures at the time of cooling (or heating) cycles starting
     and ending.
     """
-    multi_ids, vals = _records_as_lists_of_tuples(pickled_inside_file,
+    multi_ids, vals = _records_as_lists_of_tuples(dict_or_pickle_file,
                                                   'thermo_id', 'log_date',
                                                   ids=thermo_ids)
     inside_df = _create_multi_index_df([INSIDE_DEVICE_ID, INSIDE_LOG_DATE], multi_ids,
@@ -29,8 +29,11 @@ def create_inside_df(pickled_inside_file, thermo_ids=None):
     return inside_df
 
 
-def create_cycles_df(pickled_inside_file, thermo_ids=None):
-    multi_ids, vals = _records_as_lists_of_tuples(pickled_inside_file,
+def create_cycles_df(dict_or_pickle_file, thermo_ids=None):
+    """Returns pandas DataFrame containing thermostat ids, time stamps
+    and indoor temperatures.
+    """
+    multi_ids, vals = _records_as_lists_of_tuples(dict_or_pickle_file,
                                                   'thermo_id', 'start_time',
                                                   ids=thermo_ids)
     cycles_df = _create_multi_index_df([CYCLE_DEVICE_ID, CYCLE_START_TIME],
@@ -38,11 +41,11 @@ def create_cycles_df(pickled_inside_file, thermo_ids=None):
     return cycles_df
 
 
-def create_outside_df(pickled_inside_file, location_ids=None):
-    """Returns pandas dataframe containing location ids, time stamps and
+def create_outside_df(dict_or_pickle_file, location_ids=None):
+    """Returns pandas DataFrame containing location ids, time stamps and
     outdoor temperatures.
     """
-    multi_ids, vals = _records_as_lists_of_tuples(pickled_inside_file,
+    multi_ids, vals = _records_as_lists_of_tuples(dict_or_pickle_file,
                                                   'location_id', 'log_date',
                                                   ids=location_ids)
     outside_df = _create_multi_index_df([OUTSIDE_LOCATION_ID, OUTSIDE_LOG_DATE],
@@ -50,33 +53,41 @@ def create_outside_df(pickled_inside_file, location_ids=None):
     return outside_df
 
 
-def _records_as_lists_of_tuples(pickle_file, id_field, time_field, ids=None):
+def _records_as_lists_of_tuples(dict_or_pickle_file, id_field, time_field, ids=None):
     """Returns tuple containing
     1) a list of named tuples containing thermostat (or outdoor location) ids
     and time stamps and
     2) a list of either indoor (or outdoor) temperatures, or the ending time
     of a cycle, based on input of a pickle file containing a dict.
     """
-    with open(pickle_file, 'rb') as cp:
-        records = pickle.load(cp)
-        record_keys_copy = list(records.keys())
-        random_record_key = random.choice(record_keys_copy)
-        data_type = _determine_if_temperature_or_time_data(records[random_record_key])
-        if ids is not None:
-            for record_key in record_keys_copy:
-                # Discard record if it is not among the desired ids.
-                if getattr(record_key, id_field) not in ids:
-                    records.pop(record_key, None)
-        multi_ids = []
-        vals = []
-        # inside and outside temperatures have temperature data
-        if data_type == 'temperature':
-            multi_ids, vals = _temps_multi_ids(records, id_field, time_field)
-        # time_stamp data (the data value detected is end time) is associated
-        # with cycling data
-        elif data_type == 'time_stamp':
-            multi_ids, vals = _cycles_multi_ids(records, id_field, time_field)
-    return (multi_ids, vals)
+    if isinstance(dict_or_pickle_file, dict):
+        records = dict_or_pickle_file
+    else:
+        try:
+            with open(dict_or_pickle_file, 'rb') as cp:
+                records = pickle.load(cp)
+        except ValueError:
+            print('The first argument must be a pickle file or dict.')
+        else:
+            record_keys_copy = list(records.keys())
+            random_record_key = random.choice(record_keys_copy)
+            random_record = records[random_record_key]
+            data_type = _determine_if_temperature_or_time_data(random_record)
+            if ids is not None:
+                for record_key in record_keys_copy:
+                    # Discard record if it is not among the desired ids.
+                    if getattr(record_key, id_field) not in ids:
+                        records.pop(record_key, None)
+            multi_ids = []
+            vals = []
+            # inside and outside temperatures have temperature data
+            if data_type == 'temperature':
+                multi_ids, vals = _temps_multi_ids(records, id_field, time_field)
+            # time_stamp data (the data value detected is end time) is associated
+            # with cycling data
+            elif data_type == 'time_stamp':
+                multi_ids, vals = _cycles_multi_ids(records, id_field, time_field)
+            return (multi_ids, vals)
 
 
 def _determine_if_temperature_or_time_data(record_data):
