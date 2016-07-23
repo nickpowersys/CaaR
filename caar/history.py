@@ -68,26 +68,26 @@ def _records_as_lists_of_tuples(dict_or_pickle_file, id_field, time_field, ids=N
                 records = pickle.load(cp)
         except ValueError:
             print('The first argument must be a pickle file or dict.')
-        else:
-            record_keys_copy = list(records.keys())
-            random_record_key = random.choice(record_keys_copy)
-            random_record = records[random_record_key]
-            data_type = _determine_if_temperature_or_time_data(random_record)
-            if ids is not None:
-                for record_key in record_keys_copy:
-                    # Discard record if it is not among the desired ids.
-                    if getattr(record_key, id_field) not in ids:
-                        records.pop(record_key, None)
-            multi_ids = []
-            vals = []
-            # inside and outside temperatures have temperature data
-            if data_type == 'temperature':
-                multi_ids, vals = _temps_multi_ids(records, id_field, time_field)
-            # time_stamp data (the data value detected is end time) is associated
-            # with cycling data
-            elif data_type == 'time_stamp':
-                multi_ids, vals = _cycles_multi_ids(records, id_field, time_field)
-            return (multi_ids, vals)
+
+    record_keys_copy = list(records.keys())
+    random_record_key = random.choice(record_keys_copy)
+    random_record = records[random_record_key]
+    data_type = _determine_if_temperature_or_time_data(random_record)
+    if ids is not None:
+        for record_key in record_keys_copy:
+            # Discard record if it is not among the desired ids.
+            if getattr(record_key, id_field) not in ids:
+                records.pop(record_key, None)
+    multi_ids = []
+    vals = []
+    # inside and outside temperatures have temperature data
+    if data_type == 'temperature':
+        multi_ids, vals = _temps_multi_ids(records, id_field, time_field)
+    # time_stamp data (the data value detected is end time) is associated
+    # with cycling data
+    elif data_type == 'time_stamp':
+        multi_ids, vals = _cycles_multi_ids(records, id_field, time_field)
+    return (multi_ids, vals)
 
 
 def _determine_if_temperature_or_time_data(record_data):
