@@ -10,11 +10,12 @@ from caar import history as hi
 from caar import histdaily as hd
 from caar import histsummary as hs
 
-from caar.configparser_read import TEST_CYCLES_FILE, CYCLES_PICKLE_FILE, \
-    THERMO_IDS, INSIDE_PICKLE_FILE, OUTSIDE_PICKLE_FILE, LOCATION_IDS,     \
+from caar.configparser_read import TEST_CYCLES_FILE, CYCLES_PICKLE_FILE_OUT,    \
+    CYCLES_PICKLE_FILE, THERMO_IDS, INSIDE_PICKLE_FILE_OUT, INSIDE_PICKLE_FILE, \
+    OUTSIDE_PICKLE_FILE_OUT, OUTSIDE_PICKLE_FILE, LOCATION_IDS,     \
     TEST_THERMOSTATS_FILE, STATE, TEST_POSTAL_FILE, CYCLE_TYPE_COOL, \
-    TEST_INSIDE_FILE, TEST_OUTSIDE_FILE, ALL_STATES_CYCLES_PICKLED, \
-    ALL_STATES_INSIDE_PICKLED, ALL_STATES_OUTSIDE_PICKLED, THERMO_ID1, \
+    TEST_INSIDE_FILE, TEST_OUTSIDE_FILE, ALL_STATES_CYCLES_PICKLED_OUT, \
+    ALL_STATES_INSIDE_PICKLED_OUT, ALL_STATES_OUTSIDE_PICKLED_OUT, THERMO_ID1, \
     LOCATION_ID1
 
 slow = pytest.mark.skipif(
@@ -64,7 +65,7 @@ def state_fixture():
     return [STATE]
 
 
-
+@slow
 @pytest.mark.parametrize("data_file, states, thermostats, postal, cycle",
                          [(TEST_CYCLES_FILE, STATE, TEST_THERMOSTATS_FILE,
                            TEST_POSTAL_FILE, CYCLE_TYPE_COOL),
@@ -89,24 +90,23 @@ def test_select_clean(data_file, states, thermostats, postal, cycle):
 
 @slow
 @pytest.mark.parametrize("data_file, states_to_clean, expected_path, thermostats, postal",
-                         [(TEST_CYCLES_FILE, STATE, CYCLES_PICKLE_FILE,
+                         [(TEST_CYCLES_FILE, STATE, CYCLES_PICKLE_FILE_OUT,
                            TEST_THERMOSTATS_FILE, TEST_POSTAL_FILE),
-                          (TEST_CYCLES_FILE, None, ALL_STATES_CYCLES_PICKLED,
+                          (TEST_CYCLES_FILE, None, ALL_STATES_CYCLES_PICKLED_OUT,
                            None, None),
-                          (TEST_INSIDE_FILE, STATE, INSIDE_PICKLE_FILE,
+                          (TEST_INSIDE_FILE, STATE, INSIDE_PICKLE_FILE_OUT,
                            TEST_THERMOSTATS_FILE, TEST_POSTAL_FILE),
-                          (TEST_INSIDE_FILE, None, ALL_STATES_INSIDE_PICKLED,
+                          (TEST_INSIDE_FILE, None, ALL_STATES_INSIDE_PICKLED_OUT,
                            None, None),
-                          (TEST_OUTSIDE_FILE, STATE, OUTSIDE_PICKLE_FILE,
+                          (TEST_OUTSIDE_FILE, STATE, OUTSIDE_PICKLE_FILE_OUT,
                            TEST_THERMOSTATS_FILE, TEST_POSTAL_FILE),
-                          (TEST_OUTSIDE_FILE, None, ALL_STATES_OUTSIDE_PICKLED,
+                          (TEST_OUTSIDE_FILE, None, ALL_STATES_OUTSIDE_PICKLED_OUT,
                            None, None)])
-def test_pickle_cycles_inside(tmpdir, data_file, states_to_clean, expected_path,
+def test_pickle_cycles_inside_outside(tmpdir, data_file, states_to_clean, expected_path,
                               thermostats, postal):
     filename = tmpdir.join(ct.pickle_filename(data_file, states_to_clean))
-    pickle_path = ct.pickle_from_file(filename, data_file, states=states_to_clean,
-                                      TEST_THERMOSTATS_FILE=thermostats,
-                                      TEST_POSTAL_FILE=postal)
+    pickle_path = ct.pickle_from_file(data_file, picklepath=filename, states=states_to_clean,
+                                      thermostats_file=thermostats, postal_file=postal)
     pickle_file = os.path.basename(pickle_path)
     assert pickle_file == os.path.basename(expected_path)
 
@@ -171,15 +171,15 @@ def test_temps_by_interval(df_fixture, id, start, end, freq):
 
 
 @slow
-@pytest.mark.parametrize("thermo_id, start, end, freq, cycle_df, inside_df, outside_df",
+@pytest.mark.parametrize("thermo_id, start, end, freq, cycle_df, inside_df, outside_df, thermo_file",
                          [(THERMO_ID1, dt.datetime(2012, 6, 18, 21, 0, 0),
                            dt.datetime(2012, 6, 19, 20, 59, 0), '1min',
                            cycle_df_fixture(), inside_df_fixture(),
-                           outside_df_fixture())])
+                           outside_df_fixture(), TEST_THERMOSTATS_FILE)])
 def test_single_day_cycling_and_temps(thermo_id, start, end, freq, cycle_df,
-                                      inside_df, outside_df):
+                                      inside_df, outside_df, thermo_file):
     single_day_arr = hd.single_day_cycling_and_temps(thermo_id, start, end, freq, cycle_df,
-                                                     inside_df, outside_df)
+                                                     inside_df, outside_df, thermo_file)
     assert isinstance(single_day_arr[0], np.ndarray)
     assert isinstance(single_day_arr[1], np.ndarray)
     assert single_day_arr[1].shape[1] == 3

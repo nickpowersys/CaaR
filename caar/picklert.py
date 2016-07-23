@@ -1,8 +1,6 @@
-import os.path
 import click
 import caar.cleanthermostat as ct
-from caar.configparser_read import THERMOSTATS_FILE, POSTAL_FILE,      \
-    DATA_DIR
+from caar.configparser_read import THERMOSTATS_FILE, POSTAL_FILE
 
 
 """This script file creates a Python pickle file from a raw data file that
@@ -12,9 +10,9 @@ read as a Python dict (a hash file in which the indexes or keys are
 combinations of ID numbers and time stamps).
 
 Run the script from the command line. It may be necessary to add the full
-path for the directory 'comfort' to the PYTHONPATH first. For example:
+path for the directory 'caar' to the PYTHONPATH first. For example:
 
-PYTHONPATH = '/home/tl_cycling/comfort'
+PYTHONPATH = '/home/tl_cycling/caar'
 import sys
 sys.path.append(PYTHONPATH)
 
@@ -56,6 +54,8 @@ Otherwise, multiples states can be selected, such as --states='TX,IA'.
 
 @click.command()
 @click.argument('rawfile')
+@click.option('--picklepath', default=None,
+              help='Output file path (generated automatically in current directory by default).')
 @click.option('--states', default=None,
               help='List of state abbreviations, capitalized.')
 @click.option('--thermostats', default=THERMOSTATS_FILE,
@@ -63,33 +63,30 @@ Otherwise, multiples states can be selected, such as --states='TX,IA'.
 @click.option('--postal', default=POSTAL_FILE, help='File for postal codes.')
 @click.option('--cycle', default='Cool',
               help='Cool or Heat (Default: Cool).')
-def picklert(rawfile, states, thermostats, postal, cycle):
-    arg_names = [thermostats, postal]
-    arg_names_path = []
-    for i, item in enumerate(arg_names):
-        if item:
-            arg_names_path.append(os.path.join(DATA_DIR, item))
-        else:
-            arg_names_path.append(None)
-    print('Rawfile', rawfile)
+def picklert(rawfile, picklepath, states, thermostats, postal, cycle):
+    print('Raw file          :', rawfile)
+
+    if picklepath is None:
+        picklepath = ct.pickle_filename(rawfile, states)
+    print('Pickle output file:', picklepath)
+
     if states:
-        print('States:', states)
+        print('States            :', states)
+        print('Thermostats       :', thermostats)
+        print('Postal codes      :', postal)
     else:
-        print('All states: no states selected')
-    if thermostats:
-        print('Thermostats', arg_names_path[0])
-    if postal:
-        print('Postal codes', arg_names_path[1])
-    print('Cycle:', cycle)
-    kwargs = {'states': states,
-              'thermostats_file': arg_names_path[0],
-              'postal_file': arg_names_path[1],
-              'cycle': cycle}
-    raw_filepath = os.path.join(DATA_DIR, rawfile)
-    pickle_filename = ct.pickle_filename(raw_filepath, states)
-    pickle_filepath = os.path.join(DATA_DIR, pickle_filename)
-    dump_file = ct.pickle_from_file(pickle_filepath, raw_filepath, **kwargs)
-    click.echo('{} created.'.format(dump_file))
+        print('All states        : no states selected')
+
+    print('Cycle             :', cycle)
+
+    parameters_accepted = input('Pickle: enter y to proceed')
+    if parameters_accepted == 'y':
+        kwargs = {'picklepath': picklepath, 'states': states,
+                  'thermostats_file': thermostats,
+                  'postal_file': postal,
+                  'cycle': cycle}
+        dump_file = ct.pickle_from_file(rawfile, **kwargs)
+        click.echo('{} created.'.format(dump_file))
 
 
 if __name__ == '__main__':

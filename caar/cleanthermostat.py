@@ -20,24 +20,8 @@ Inside = namedtuple('Inside', ['thermo_id', 'log_date'])
 Outside = namedtuple('Outside', ['location_id', 'log_date'])
 
 
-def pickle_filename(text_file, states_to_clean):
-    """Automatically generate file name based on state(s) and content.
-    Takes a string with two-letter abbreviations for states separated by
-    commas. If all states are desired, states_to_clean should be None.
-    """
-    with open(text_file) as f:
-        header = _parse_line(f.readline())
-    data_type = _data_type_matching_header(header)
-    if states_to_clean:
-        states = states_to_clean.split(',')
-    else:
-        states = ['all_states']
-    filename = '_'.join(states + [data_type]) + '.pickle'
-    return filename
-
-
-def pickle_from_file(filepath, raw_file, cycle=CYCLE_TYPE_COOL, states=None,
-                     thermostats_file=None, postal_file=None):
+def pickle_from_file(raw_file, picklepath=None, cycle=CYCLE_TYPE_COOL,
+                     states=None, thermostats_file=None, postal_file=None):
     """Read comma-separated text file and create pickle file containing dict of
     records. The keys are named tuples containing numeric IDs and time stamps.
 
@@ -57,7 +41,8 @@ def pickle_from_file(filepath, raw_file, cycle=CYCLE_TYPE_COOL, states=None,
 
     Assign all of these fields to tuple INSIDE_FIELDS in configparser_read.py.
 
-    Indicate the 0-based column positions corresponding to the order of columns:
+    Indicate the 0-based column positions corresponding to the order of
+    columns:
     INSIDE_ID_INDEX, INSIDE_LOG_DATE_POS, INSIDE_DEGREES_POS
 
     Cycling data column headings should be assigned to these variables in the
@@ -70,7 +55,7 @@ def pickle_from_file(filepath, raw_file, cycle=CYCLE_TYPE_COOL, states=None,
     (meaning cooling or heating, for example), 3) cycle start time (each ON
     cycle should have a time stamp for its start and end), 4) cycle end time,
     and all other fields, which may contain more information such as kWh or
-    BTUs. The labels assigned to CYCLE_FIELD# variables should match the
+    BTUs. The labels assigned to CYCLE_FIELD variables should match the
     column headings in the file exactly.
 
     The reason for this is to ensure that each type of data file is read
@@ -92,7 +77,8 @@ def pickle_from_file(filepath, raw_file, cycle=CYCLE_TYPE_COOL, states=None,
     UNIQUE_CYCLE_FIELD_INDEX
 
     Assign the 0-based indexes for these columns as well: 1) CYCLE_TYPE_INDEX,
-    which indicates the mode of operation for a device, such as 'Cool' or 'Heat';
+    which indicates the mode of operation for a device, such as 'Cool' or
+    'Heat';
     2) CYCLE_START_INDEX (time stamp), 3) CYCLE_VALUES_START (first column
     that will NOT be part of a multi-index, but is a record value field. A
     multi-index should consist of the leading columns that contains an ID
@@ -113,11 +99,10 @@ def pickle_from_file(filepath, raw_file, cycle=CYCLE_TYPE_COOL, states=None,
      in the outside data file, and not in the cycle or indoor data files)
     2) OUTSIDE_LOG_DATE_INDEX
     3) OUTSIDE_DEGREES_INDEX
-
     Args:
-        filepath (str): The path of the desired pickle file.
-
         raw_file (str): The input file.
+
+        picklepath (str): The path of the desired pickle file.
 
         cycle (Optional[str]): 'Cool' (default) or 'Heat'. The type of cycle
         that will be in the output.
@@ -132,8 +117,9 @@ def pickle_from_file(filepath, raw_file, cycle=CYCLE_TYPE_COOL, states=None,
         if there is a states argument.
 
     Returns:
-        filepath (str): Path of output file.
+        picklepath (str): Path of output file.
     """
+
     kwargs = {'states': states, 'thermostats_file': thermostats_file,
               'cycle': cycle, 'postal_file': postal_file}
     if states:
@@ -147,10 +133,28 @@ def pickle_from_file(filepath, raw_file, cycle=CYCLE_TYPE_COOL, states=None,
         clean_dict = _dict_from_lines_of_text(fin, header, **kwargs)
     # Due to testing and the need of temporary directories,
     # need to convert LocalPath to string
-    str_filepath = str(filepath)
-    with open(str_filepath, 'wb') as fout:
+    if picklepath is None:
+        picklepath = pickle_filename(raw_file, states)
+    str_picklepath = str(picklepath)
+    with open(str_picklepath, 'wb') as fout:
         pickle.dump(clean_dict, fout, pickle.HIGHEST_PROTOCOL)
-    return str_filepath
+    return str_picklepath
+
+
+def pickle_filename(text_file, states_to_clean):
+    """Automatically generate file name based on state(s) and content.
+    Takes a string with two-letter abbreviations for states separated by
+    commas. If all states are desired, states_to_clean should be None.
+    """
+    with open(text_file) as f:
+        header = _parse_line(f.readline())
+    data_type = _data_type_matching_header(header)
+    if states_to_clean:
+        states = states_to_clean.split(',')
+    else:
+        states = ['all_states']
+    filename = '_'.join(states + [data_type]) + '.pickle'
+    return filename
 
 
 def _data_type_matching_header(header):
@@ -376,7 +380,8 @@ def _zip_codes_in_states(postal_file, states):
     if os.path.splitext(postal_file)[1] == '.csv':
         zips_default_index_df = pd.read_csv(postal_file, dtype=dtype_zip_code)
     else:
-        zips_default_index_df = pd.read_table(postal_file, dtype=dtype_zip_code)
+        zips_default_index_df = pd.read_table(postal_file,
+                                              dtype=dtype_zip_code)
     zips_default_index_df[zip_code] = zips_default_index_df[zip_code]\
         .str.pad(5, side='left', fillchar='0')
     zips_unfiltered_df = zips_default_index_df.set_index([zip_code])
@@ -396,7 +401,7 @@ def _thermostats_df(thermostats_file, postal_file):
                                  dtype=dtype_thermostat_zip)
     else:
         thermos_df = pd.read_table(thermostats_file, index_col=0,
-                                 dtype=dtype_thermostat_zip)
+                                   dtype=dtype_thermostat_zip)
     thermos_df[zip_code] = thermos_df[zip_code].str.pad(5, side='left',
                                                         fillchar='0')
     return thermos_df

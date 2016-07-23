@@ -3,25 +3,14 @@ import os.path
 
 parser = ConfigParser()
 
-if __name__ == '__main__':
-    path = os.path.split(sys.argv[0])[0]
-else:
-    path = os.path.split(__file__)[0]
+path = os.path.split(__file__)[0]
 
 parser.read(os.path.join(path, 'config.ini'))
 
 
-# Directory
-if parser['raw_data_files']['DATA_DIR'] == '':
-    DATA_DIR = os.path.abspath('../data')
-else:
-    DATA_DIR = parser['raw_data_files']['DATA_DIR']
-
 # File names with full path
-THERMOSTATS_FILE = os.path.join(DATA_DIR, 
-                                parser['raw_data_files']['THERMOSTATS_FILE'])
-POSTAL_FILE = os.path.join(DATA_DIR, 
-                           parser['raw_data_files']['POSTAL_FILE'])
+THERMOSTATS_FILE = parser['raw_data_files']['THERMOSTATS_FILE']
+POSTAL_FILE = parser['raw_data_files']['POSTAL_FILE']
 
 # File headers (strings: headings for each column in the raw text files)
 CYCLE_FIELD1 = parser['file_headers']['CYCLE_FIELD1']
@@ -128,9 +117,17 @@ TEST_OUTSIDE_FILE = os.path.join(TEST_DIR, parser['test_files']['TEST_OUTSIDE_FI
 TEST_THERMOSTATS_FILE = os.path.join(TEST_DIR, parser['test_files']['TEST_THERMOSTATS_FILE'])
 TEST_POSTAL_FILE = os.path.join(TEST_DIR, parser['test_files']['TEST_POSTAL_FILE'])
 
+CYCLES_PICKLE_FILE_OUT = os.path.join(TEST_DIR, parser['test_pickle_files']['CYCLES_PICKLE_FILE_OUT'])
+INSIDE_PICKLE_FILE_OUT = os.path.join(TEST_DIR, parser['test_pickle_files']['INSIDE_PICKLE_FILE_OUT'])
+OUTSIDE_PICKLE_FILE_OUT = os.path.join(TEST_DIR, parser['test_pickle_files']['OUTSIDE_PICKLE_FILE_OUT'])
+
 CYCLES_PICKLE_FILE = os.path.join(TEST_DIR, parser['test_pickle_files']['CYCLES_PICKLE_FILE'])
 INSIDE_PICKLE_FILE = os.path.join(TEST_DIR, parser['test_pickle_files']['INSIDE_PICKLE_FILE'])
 OUTSIDE_PICKLE_FILE = os.path.join(TEST_DIR, parser['test_pickle_files']['OUTSIDE_PICKLE_FILE'])
+
+ALL_STATES_CYCLES_PICKLED_OUT = os.path.join(TEST_DIR, parser['test_pickle_files']['ALL_STATES_CYCLES_PICKLED_OUT'])
+ALL_STATES_INSIDE_PICKLED_OUT = os.path.join(TEST_DIR, parser['test_pickle_files']['ALL_STATES_INSIDE_PICKLED_OUT'])
+ALL_STATES_OUTSIDE_PICKLED_OUT = os.path.join(TEST_DIR, parser['test_pickle_files']['ALL_STATES_OUTSIDE_PICKLED_OUT'])
 
 ALL_STATES_CYCLES_PICKLED = os.path.join(TEST_DIR, parser['test_pickle_files']['ALL_STATES_CYCLES_PICKLED'])
 ALL_STATES_INSIDE_PICKLED = os.path.join(TEST_DIR, parser['test_pickle_files']['ALL_STATES_INSIDE_PICKLED'])
