@@ -20,9 +20,65 @@ Inside = namedtuple('Inside', ['thermo_id', 'log_date'])
 Outside = namedtuple('Outside', ['location_id', 'log_date'])
 
 
+def dict_from_file(raw_file, cycle=CYCLE_TYPE_COOL, states=None,
+                   thermostats_file=None, postal_file=None):
+    """Read delimited text file and create dict of records. The keys are named
+    2-tuples containing numeric IDs and time stamps.
+
+    The raw files must each have a header and the first column on the left must
+    be a numeric ID. The output can be filtered on records from a
+    state or set of states by specifying a comma-delimited string containing
+    state abbreviations. Otherwise, all available records will be in the
+    output.  If a state or states are specified, a thermostats file and postal
+    code file must be in the arguments.
+
+    See the example .csv data files at https://github.com/nickpowersys/caar
+
+    Thermostat cycle files should have these headings and corresponding row
+    values: "ThermostatId", "CycleType", "StartTime", "EndTime", and three
+    additional columns, (dummy headings and values may be used).
+
+    Inside temperature files should have these headings and corresponding row
+    values: "ThermostatId", "LogDate", "Degrees".
+
+    Outside temperature files should have these headings and corresponding row
+    values: "LocationId", "LogDate", "Degrees".
+
+    Args:
+        raw_file (str): The input file.
+
+        cycle (Optional[str]): 'Cool' (default) or 'Heat'. The type of cycle
+        that will be in the output.
+
+        states (Optional[str]): One or more comma-separated, two-letter state abbreviations.
+
+        thermostats_file (Optional[str]): Path of metadata file for thermostats. Required if there is a states argument.
+
+        postal_file (Optional[str]): Metadata file for postal codes. Required if there is a states argument.
+
+    Returns:
+        clean_dict (dict): Dict.
+   """
+
+    kwargs = {'states': states, 'thermostats_file': thermostats_file,
+              'cycle': cycle, 'postal_file': postal_file}
+    if states:
+        try:
+            assert kwargs.get('thermostats_file'), kwargs.get('postal_file')
+        except ValueError:
+            missing_thermostats_or_postal_error_message()
+            return 0
+
+    with open(raw_file) as fin:
+        header = _parse_line(fin.readline())
+        clean_dict = _dict_from_lines_of_text(fin, header, **kwargs)
+
+    return clean_dict
+
+
 def pickle_from_file(raw_file, picklepath=None, cycle=CYCLE_TYPE_COOL,
                      states=None, thermostats_file=None, postal_file=None):
-    """Read comma-separated text file and create pickle file containing dict of
+    """Read delimited text file and create binary pickle file containing dict of
     records. The keys are named tuples containing numeric IDs and time stamps.
 
     The raw files must each have a header and the first column on the left must
@@ -32,112 +88,55 @@ def pickle_from_file(raw_file, picklepath=None, cycle=CYCLE_TYPE_COOL,
     output.  If a state or states are specified, a thermostats file and postal
     code file must be in the arguments.
 
+    See the example .csv data files at https://github.com/nickpowersys/caar
+
+    Thermostat cycle files should have these headings and corresponding row
+    values: "ThermostatId", "CycleType", "StartTime", "EndTime", and three
+    additional columns, (dummy headings and values may be used).
+
     Inside temperature files should have these headings and corresponding row
-    values: "ThermostatId", "LogDate", "Degrees"
-    Indicate the column headings in config.ini under the [file_headers]
-    section. Assign the column headings for a unique thermostat ID, time stamp,
-     and indoor temperature fields to these variables:
-    INSIDE_FIELD1, INSIDE_FIELD2, INSIDE_FIELD3
+    values: "ThermostatId", "LogDate", "Degrees".
 
-    Assign all of these fields to tuple INSIDE_FIELDS in configparser_read.py.
+    Outside temperature files should have these headings and corresponding row
+    values: "LocationId", "LogDate", "Degrees".
 
-    Indicate the 0-based column positions corresponding to the order of
-    columns:
-    INSIDE_ID_INDEX, INSIDE_LOG_DATE_POS, INSIDE_DEGREES_POS
-
-    Cycling data column headings should be assigned to these variables in the
-    [file_headers] section of config.ini (the number of fields indicated should
-    match the number of columns in the raw data files exactly):
-    CYCLE_FIELD1, CYCLE_FIELD2, CYCLE_FIELD3, CYCLE_FIELD4, CYCLE_FIELD5,
-    CYCLE_FIELD6, CYCLE_FIELD7
-
-    They should cover columns that indicate a 1) thermostat ID, 2) cycle type
-    (meaning cooling or heating, for example), 3) cycle start time (each ON
-    cycle should have a time stamp for its start and end), 4) cycle end time,
-    and all other fields, which may contain more information such as kWh or
-    BTUs. The labels assigned to CYCLE_FIELD variables should match the
-    column headings in the file exactly.
-
-    The reason for this is to ensure that each type of data file is read
-    correctly and that each record in the raw data file can be validated as it
-    is read.
-
-    In config.ini, all fields are taken as strings by configparser_read.py due
-    to the configparser Python library, so they should not  have any single
-    or double quotes around them.
-
-    Assign the corresponding column heading labels to these variables in
-    config.ini in the [file_headers] section:
-    CYCLE_START_TIME, CYCLE_END_TIME
-
-    Assign the 0-based index (column position) of a column heading label that
-    is unique to cycle data fields (not found in either indoor temperature
-    data file or the outdoor temperature data file) by assigning to this
-    variable in config.ini:
-    UNIQUE_CYCLE_FIELD_INDEX
-
-    Assign the 0-based indexes for these columns as well: 1) CYCLE_TYPE_INDEX,
-    which indicates the mode of operation for a device, such as 'Cool' or
-    'Heat';
-    2) CYCLE_START_INDEX (time stamp), 3) CYCLE_VALUES_START (first column
-    that will NOT be part of a multi-index, but is a record value field. A
-    multi-index should consist of the leading columns that contains an ID
-    and a time stamp.
-
-    Cycling data column headings should be assigned to these variables in the
-    [file_headers] section of config.ini (the number of fields indicated should
-    match the number of columns in the raw data files exactly):
-    OUTSIDE_FIELD1, OUTSIDE_FIELD2, OUTSIDE_FIELD3.
-
-    Assign the corresponding column heading labels to these variables in
-    config.ini in the [file_headers] section:
-    OUTSIDE_TIMESTAMP_LABEL, OUTSIDE_DEGREES_LABEL
-
-    Assign the 0-based indexes for the positions of the columns corresponding
-    to these types of variables:
-    1) UNIQUE_OUTSIDE_FIELD_INDEX (for a column with a label that is only found
-     in the outside data file, and not in the cycle or indoor data files)
-    2) OUTSIDE_LOG_DATE_INDEX
-    3) OUTSIDE_DEGREES_INDEX
     Args:
         raw_file (str): The input file.
 
         picklepath (str): The path of the desired pickle file.
 
-        cycle (Optional[str]): 'Cool' (default) or 'Heat'. The type of cycle
-        that will be in the output.
+        cycle (Optional[str]): 'Cool' (default) or 'Heat'. The type of cycle that will be in the output.
 
-        states (Optional[str]): One or more comma-separated, two-letter state
-        abbreviations.
+        states (Optional[str]): One or more comma-separated, two-letter state abbreviations.
 
-        thermostats_file (Optional[str]): Path of metadata file for
-        thermostats. Required if there is a states argument.
+        thermostats_file (Optional[str]): Path of metadata file for thermostats. Required if there is a states argument.
 
-        postal_file (Optional[str]): Metadata file for postal codes. Required
-        if there is a states argument.
+        postal_file (Optional[str]): Metadata file for postal codes. Required if there is a states argument.
 
     Returns:
         picklepath (str): Path of output file.
     """
 
-    kwargs = {'states': states, 'thermostats_file': thermostats_file,
-              'cycle': cycle, 'postal_file': postal_file}
     if states:
         try:
-            assert kwargs.get('thermostats_file'), kwargs.get('postal_file')
-        except AssertionError:
+            assert thermostats_file is not None, postal_file is not None
+        except ValueError:
             missing_thermostats_or_postal_error_message()
             return 0
-    with open(raw_file) as fin:
-        header = _parse_line(fin.readline())
-        clean_dict = _dict_from_lines_of_text(fin, header, **kwargs)
+
+    kwargs = {'states': states, 'thermostats_file': thermostats_file,
+              'cycle': cycle, 'postal_file': postal_file}
+    clean_dict = dict_from_file(raw_file, **kwargs)
+
     # Due to testing and the need of temporary directories,
     # need to convert LocalPath to string
     if picklepath is None:
         picklepath = pickle_filename(raw_file, states)
     str_picklepath = str(picklepath)
+
     with open(str_picklepath, 'wb') as fout:
         pickle.dump(clean_dict, fout, pickle.HIGHEST_PROTOCOL)
+
     return str_picklepath
 
 
