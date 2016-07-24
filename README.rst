@@ -24,14 +24,17 @@ Dependencies:
 * NumPy
 * SciPy
 * pandas
-* py
 * click
+* py
+* pytest
 
-The repository may be cloned, and given that the first set of functions in cleanthermostat.py deals with reading comma- or tab-delimited text files, it will be easiest to begin using the project by reviewing the sample input files in the data directory. This is the default directory for data files. To use data columns that are not exactly like those in the sample input files, the config.ini file can be edited to indicate each of the data columns, as long as the first column is a numeric ID.
+Documentation is at  `http://caar.readthedocs.io/en/latest/ <http://caar.readthedocs.io/en/latest/>`_
 
-The script in picklert.py can be run from the command line in order to initiate the process of reading data files. Detailed instructions are given in the leading source code comment of picklert.py itself.
+Begin by reviewing the sample input files in the data directory at https://github.com/nickpowersys/CaaR, within the data folder.
 
-A binary output file with a .pickle extension will be created. Once this type of file is created, the file name can be used as an argument in order to easily create a pandas DataFrame using the DataFrame creation functions in history.py. The DataFrame will have a multi-field index (using IDs and time stamps). Other functions convert the DataFrames to NumPy arrays for deeper data analysis.
+**Cleanthermostat module**: In addition to using functions in the cleanthermostat module to create a dict of pickle file, it is also possible to run the script in picklert.py (seen at https://github.com/nickpowersys/CaaR/caar) from the command line in order to initiate the process of reading data files. Detailed instructions are given in the leading source code comments of picklert.py itself. A binary output file with a .pickle extension will be created.
+
+**History module**: Once a pickle file or dict is created with the cleanthermostat module, the file name or dict can be used as an argument in order to easily create a pandas DataFrame using the DataFrame creation functions in the history module. The DataFrame will have a multi-field index (using IDs and time stamps). Other functions convert the DataFrames to NumPy arrays for deeper data analysis.
 
 Contributors
 ============
