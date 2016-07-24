@@ -22,7 +22,7 @@ import mock
  
 MOCK_MODULES = ['scipy', 'numpy', 'py', 'pytest', 'click', 'pandas']
 for mod_name in MOCK_MODULES:
-sys.modules[mod_name] = mock.Mock()
+    sys.modules[mod_name] = mock.Mock()
 
 
 
