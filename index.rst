@@ -11,7 +11,7 @@ Contents:
 .. toctree::
    :maxdepth: 4
 
-   caar
+   caar.rst
 
 
 Indices and tables
