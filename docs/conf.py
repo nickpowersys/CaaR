@@ -220,8 +220,8 @@ htmlhelp_basename = 'caardoc'
 def run_apidoc(_):
     modules = ['caar']
     for module in modules:
-        cur_dir = os.path.abspath(os.path.dirname(__file__))
-        output_path = cur_dir
+        # cur_dir = os.path.abspath(os.path.dirname(__file__))
+        output_path = os.path.join('..', 'docs')
         cmd_path = 'sphinx-apidoc'
         if hasattr(sys, 'real_prefix'):  # Check to see if we are in a virtualenv
             # If we are, assemble the path manually
