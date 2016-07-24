@@ -1,5 +1,7 @@
 from setuptools import find_packages, setup
 
+BLAS_LIB = ['f77blas','cblas','atlas','gfortran']
+
 setup(
     name='caar',
     version='0.0.2',
