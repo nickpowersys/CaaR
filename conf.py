@@ -24,6 +24,7 @@ from sphinx.apidoc import main
 sys.path.insert(0, os.path.abspath('docs'))
 sys.path.insert(0, os.path.abspath('caar'))
 sys.path.insert(0, os.path.abspath('..'))
+sys.path.insert(0, os.path.abspath('.'))
 
 
 # -- General configuration ------------------------------------------------
