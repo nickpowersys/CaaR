@@ -20,7 +20,7 @@ from sphinx.apidoc import main
 
 import mock
  
-MOCK_MODULES = ['scipy', 'matplotlib', 'matplotlib.pyplot', 'scipy.interpolate']
+MOCK_MODULES = ['scipy', 'numpy', 'py', 'pytest', 'click', 'pandas']
 for mod_name in MOCK_MODULES:
 sys.modules[mod_name] = mock.Mock()
 
