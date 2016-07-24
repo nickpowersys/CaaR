@@ -15,7 +15,7 @@
 
 import sys
 import os
-
+from sphinx.apidoc import main
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -216,6 +216,7 @@ htmlhelp_basename = 'caardoc'
 
 # -- Options for RTD output -------
 
+
 def run_apidoc(_):
     modules = ['caar']
     for module in modules:
@@ -225,7 +226,7 @@ def run_apidoc(_):
         if hasattr(sys, 'real_prefix'):  # Check to see if we are in a virtualenv
             # If we are, assemble the path manually
             cmd_path = os.path.abspath(os.path.join(sys.prefix, 'bin', 'sphinx-apidoc'))
-        subprocess.check_call([cmd_path, '-e', '-o', output_path, module, '--force'])
+        main(['-e', '-o', output_path, module, '--force'])
 
 def setup(app):
     app.connect('builder-inited', run_apidoc)
