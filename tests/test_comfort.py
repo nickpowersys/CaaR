@@ -104,23 +104,23 @@ def test_select_clean(data_file, states, thermostats, postal, cycle):
                            None, None)])
 def test_pickle_cycles_inside_outside(tmpdir, data_file, states_to_clean, expected_path,
                               thermostats, postal):
-    filename = tmpdir.join(ct.pickle_filename(data_file, states_to_clean))
+    filename = tmpdir.join(ct._pickle_filename(data_file, states_to_clean))
     pickle_path = ct.pickle_from_file(data_file, picklepath=filename, states=states_to_clean,
                                       thermostats_file=thermostats, postal_file=postal)
     pickle_file = os.path.basename(pickle_path)
     assert pickle_file == os.path.basename(expected_path)
 
 
-@slow
+
 @pytest.mark.parametrize("pickle_file, df_creation_func, id_type, ids",
                          [(CYCLES_PICKLE_FILE, hi.create_cycles_df,
-                           'thermo_ids', set([THERMO_ID1])),
+                           'thermo_ids', [THERMO_ID1]),
                           (CYCLES_PICKLE_FILE, hi.create_cycles_df, None, None),
                           (INSIDE_PICKLE_FILE, hi.create_inside_df,
-                           'thermo_ids', set([THERMO_ID1])),
+                           'thermo_ids', [THERMO_ID1]),
                           (INSIDE_PICKLE_FILE, hi.create_inside_df, None, None),
                           (OUTSIDE_PICKLE_FILE, hi.create_outside_df,
-                           'location_ids', set([LOCATION_ID1])),
+                           'location_ids', [LOCATION_ID1]),
                           (OUTSIDE_PICKLE_FILE, hi.create_outside_df, None, None)])
 def test_df_creation(pickle_file, df_creation_func, id_type, ids):
     kwargs = {}

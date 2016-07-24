@@ -67,7 +67,7 @@ def picklert(rawfile, picklepath, states, thermostats, postal, cycle):
     print('Raw file          :', rawfile)
 
     if picklepath is None:
-        picklepath = ct.pickle_filename(rawfile, states)
+        picklepath = ct._pickle_filename(rawfile, states)
     print('Pickle output file:', picklepath)
 
     if states:
