@@ -11,6 +11,12 @@ setup(
     author_email='nbprofessional@gmail.com',
     description='Accelerating analysis of data on temperatures and '
                 'thermostat-driven loads.',
+    install_requires=['numpy>=1.11.1',
+                  'pandas>=0.18.1',
+                  'scipy>=0.17.1',
+                  'click>=6.6',
+                  'py>=1.4.31'
+                  ],
     packages=find_packages(),
     package_data={
       'caar': ['./config.ini'],
