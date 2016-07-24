@@ -1,9 +1,7 @@
-import datetime as dt
 import os.path
 import pickle
 from collections import namedtuple
 
-import numpy as np
 import pandas as pd
 
 from caar.configparser_read import UNIQUE_CYCLE_FIELD_INDEX,             \
@@ -12,7 +10,7 @@ from caar.configparser_read import UNIQUE_CYCLE_FIELD_INDEX,             \
     POSTAL_TWO_LETTER_STATE, CYCLE_TYPE_INDEX, CYCLE_START_INDEX,        \
     CYCLE_VALUES_START, THERMO_ID_FIELD, INSIDE_LOG_DATE_INDEX,          \
     OUTSIDE_LOG_DATE_INDEX, INSIDE_DEGREES_INDEX, OUTSIDE_DEGREES_INDEX, \
-    CYCLE_TYPE_COOL, INSIDE_TEMP_FIELD
+    CYCLE_TYPE_COOL
 
 
 Cycle = namedtuple('Cycle', ['thermo_id', 'cycle_mode', 'start_time'])
@@ -25,11 +23,14 @@ def dict_from_file(raw_file, cycle=CYCLE_TYPE_COOL, states=None,
     """Read delimited text file and create dict of records. The keys are named
     2-tuples containing numeric IDs and time stamps.
 
-    The raw files must each have a header and the first column on the left must
-    be a numeric ID. The output can be filtered on records from a
-    state or set of states by specifying a comma-delimited string containing
-    state abbreviations. Otherwise, all available records will be in the
-    output.  If a state or states are specified, a thermostats file and postal
+    The raw file must have a header and the first column on the left must
+    be a numeric ID.
+
+    The output can be filtered on records from a state or set of states by
+    specifying a comma-delimited string containing state abbreviations.
+    Otherwise, all available records will be in the output.
+
+    If a state or states are specified, a thermostats file and postal
     code file must be in the arguments.
 
     See the example .csv data files at https://github.com/nickpowersys/caar
@@ -47,8 +48,7 @@ def dict_from_file(raw_file, cycle=CYCLE_TYPE_COOL, states=None,
     Args:
         raw_file (str): The input file.
 
-        cycle (Optional[str]): 'Cool' (default) or 'Heat'. The type of cycle
-        that will be in the output.
+        cycle (Optional[str]): 'Cool' (default) or 'Heat'. The type of cycle that will be in the output.
 
         states (Optional[str]): One or more comma-separated, two-letter state abbreviations.
 
@@ -82,11 +82,14 @@ def pickle_from_file(raw_file, picklepath=None, cycle=CYCLE_TYPE_COOL,
     records. The keys are named tuples containing numeric IDs and time stamps.
 
     The raw files must each have a header and the first column on the left must
-    be a numeric ID. The output can be filtered on records from a
-    state or set of states by specifying a comma-delimited string containing
-    state abbreviations. Otherwise, all available records will be in the
-    output.  If a state or states are specified, a thermostats file and postal
-    code file must be in the arguments.
+    be a numeric ID.
+
+    The output can be filtered on records from a state or set of states by
+    specifying a comma-delimited string containing state abbreviations.
+    Otherwise, all available records will be in the output.
+
+    If a state or states are specified, a thermostats file and postal code
+    file must be in the arguments.
 
     See the example .csv data files at https://github.com/nickpowersys/caar
 
@@ -103,7 +106,7 @@ def pickle_from_file(raw_file, picklepath=None, cycle=CYCLE_TYPE_COOL,
     Args:
         raw_file (str): The input file.
 
-        picklepath (str): The path of the desired pickle file.
+        picklepath (str): The path of the desired pickle file. If it is not specified, a filename is generated automatically.
 
         cycle (Optional[str]): 'Cool' (default) or 'Heat'. The type of cycle that will be in the output.
 
@@ -131,7 +134,7 @@ def pickle_from_file(raw_file, picklepath=None, cycle=CYCLE_TYPE_COOL,
     # Due to testing and the need of temporary directories,
     # need to convert LocalPath to string
     if picklepath is None:
-        picklepath = pickle_filename(raw_file, states)
+        picklepath = _pickle_filename(raw_file, states)
     str_picklepath = str(picklepath)
 
     with open(str_picklepath, 'wb') as fout:
@@ -140,7 +143,7 @@ def pickle_from_file(raw_file, picklepath=None, cycle=CYCLE_TYPE_COOL,
     return str_picklepath
 
 
-def pickle_filename(text_file, states_to_clean):
+def _pickle_filename(text_file, states_to_clean):
     """Automatically generate file name based on state(s) and content.
     Takes a string with two-letter abbreviations for states separated by
     commas. If all states are desired, states_to_clean should be None.
@@ -493,57 +496,6 @@ def _leading_id(record):
 def cooling_df(cycle_df):
     idx = pd.IndexSlice
     return cycle_df.loc[idx[:, [CYCLE_TYPE_COOL], :, :, :, :], :]
-
-
-def count_inside_temp_by_thermo_id(df):
-    """Returns the total number of inside temperature readings for each
-    thermostat within the DataFrame.
-    """
-
-    count_by_id_sorted = (df.groupby(level=THERMO_ID_FIELD, sort=False)
-                          .count()
-                          .sort_values([INSIDE_TEMP_FIELD], inplace=True,
-                                       ascending=False))
-    count_by_id_arr = np.zeros((len(count_by_id_sorted), 2), dtype=np.uint32)
-    for i, row in enumerate(count_by_id_sorted.iterrows()):
-        count_by_id_arr[i, :] = (row[0], row[1][0])
-    return count_by_id_arr
-
-
-def count_inside_temps_in_intervals_for_thermo_id(df, id, interval='D'):
-    """Returns the count of inside temperature readings for a thermostat by
-    interval (defaults to daily).
-    """
-    idx = pd.IndexSlice
-    count_temps_per_day = (df.loc[idx[id, :], [INSIDE_TEMP_FIELD]]
-                           .reset_index(level=THERMO_ID_FIELD)
-                           .groupby(THERMO_ID_FIELD)
-                           .resample(interval)
-                           .count())
-    print(count_temps_per_day)
-
-
-def data_points_per_primary_id(id, df):
-    idx = pd.IndexSlice
-    return df.loc[idx[id, :], :].count()
-
-
-def dt_timedelta_from_frequency(freq):
-    """Return a datetime.timedelta object based on the input arg freq, which is
-     a string.
-     """
-    freq_codes = ['H', 'min', 'T', 'S']
-    if freq[-1] in freq_codes:
-        freq_type = freq[-1]
-        num_units = freq[:len(freq) - 1] if len(freq) >= 2 else 1
-    elif freq[-3:] in freq_codes:
-        freq_type = freq[-3]
-        num_units = freq[:len(freq) - 3] if len(freq) >= 4 else 1
-    freq_timedelta_mapping = {'H': dt.timedelta(hours=num_units),
-                              'min': dt.timedelta(minutes=num_units),
-                              'T': dt.timedelta(minutes=num_units),
-                              'S': dt.timedelta(seconds=num_units)}
-    return dt.timedelta(freq_timedelta_mapping[freq_type])
 
 
 def missing_thermostats_or_postal_error_message():
