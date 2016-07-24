@@ -8,12 +8,6 @@ setup(
     license='BSD 3-Clause License',
     author='Nicholas A. Brown',
     tests_require=['pytest'],
-    install_requires=['numpy>=1.11.1',
-                      'pandas>=0.18.1',
-                      'scipy>=0.17.1',
-                      'click>=6.6',
-                      'py>=1.4.31'
-                      ],
     author_email='nbprofessional@gmail.com',
     description='Accelerating analysis of data on temperatures and '
                 'thermostat-driven loads.',
