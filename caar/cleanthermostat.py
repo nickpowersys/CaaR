@@ -394,8 +394,6 @@ def _zip_codes_in_states(postal_file, states):
 
 def _thermostats_df(thermostats_file, postal_file):
     """Return pandas dataframe of thermostat metadata from raw file."""
-    print('thermostats_df postal_file')
-    print(postal_file)
     zip_code = THERMOSTAT_ZIP_CODE
     dtype_thermostat_zip = {zip_code: 'str'}
     if os.path.splitext(postal_file)[1] == '.csv':
