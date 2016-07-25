@@ -32,7 +32,7 @@ Documentation is at  `http://caar.readthedocs.io/en/latest/ <http://caar.readthe
 
 Begin by reviewing the sample input files in the data directory at https://github.com/nickpowersys/CaaR, within the data folder.
 
-**Cleanthermostat module**: In addition to using functions in the cleanthermostat module to create a dict of pickle file, it is also possible to run the script in picklert.py (seen at https://github.com/nickpowersys/CaaR/caar) from the command line in order to initiate the process of reading data files. Detailed instructions are given in the leading source code comments of picklert.py itself. A binary output file with a .pickle extension will be created.
+**Cleanthermostat module**: In addition to using functions in the cleanthermostat module to create a dict or pickle file, it is also possible to run the script in picklert.py (seen at https://github.com/nickpowersys/CaaR/caar) from the command line in order to initiate the process of reading data files. Detailed instructions are given in the leading source code comments of picklert.py itself. A binary output file with a .pickle extension will be created.
 
 **History module**: Once a pickle file or dict is created with the cleanthermostat module, the file name or dict can be used as an argument in order to easily create a pandas DataFrame using the DataFrame creation functions in the history module. The DataFrame will have a multi-field index (using IDs and time stamps). Other functions convert the DataFrames to NumPy arrays for deeper data analysis.
 
