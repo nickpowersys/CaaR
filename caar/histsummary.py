@@ -29,8 +29,8 @@ def days_of_data_by_id(df):
     return days_data_df
 
 
-def consecutive_days_of_observations(id, cycles_df, inside_df, outside_df,
-                                     thermostats_file):
+def consecutive_days_of_observations(id, thermostats_file, cycles_df,
+                                     inside_df, outside_df=None):
     """
     Returns a pandas DataFrame with a row for each date range indicating the
     number of consecutive days of data across all DataFrames given as
@@ -39,24 +39,25 @@ def consecutive_days_of_observations(id, cycles_df, inside_df, outside_df,
     Args:
         id (int): The ID of the thermostat.
 
+        thermostats_file(str): Path of thermostats file.
+
         cycles_df (pandas DataFrame): DataFrame as created by **history**
         module.
 
         inside_df (pandas DataFrame): DataFrame as created by **history**
         module.
 
-        outside_df (pandas DataFrame): DataFrame as created by **history**
-        module.
-
-        thermostats_file(str): Path of thermostats file.
+        outside_df (Optional: pandas DataFrame): DataFrame as created by
+        **history** module.
 
     Returns:
         consecutive_days_df (pandas DataFrame): DataFrame with 'First Day',
         'Last Day', and count ('Consecutive Days') for each set of consecutive
         days, for the specified ID.
     """
-    obs_counts = daily_cycle_and_temp_obs_counts(id, cycles_df, inside_df,
-                                                 outside_df, thermostats_file)
+    obs_counts = daily_cycle_and_temp_obs_counts(id, thermostats_file,
+                                                 cycles_df, inside_df,
+                                                 outside_df=outside_df)
     streaks = []
     streak_days = 0
     one_day = pd.Timedelta(days=1)
@@ -87,8 +88,8 @@ def consecutive_days_of_observations(id, cycles_df, inside_df, outside_df,
     return streaks_df
 
 
-def daily_cycle_and_temp_obs_counts(id, cycles_df, inside_df, outside_df,
-                                    thermostats_file):
+def daily_cycle_and_temp_obs_counts(id, thermostats_file, cycles_df, inside_df,
+                                    outside_df=None):
     """Returns a pandas DataFrame with the count of observations of each type
     of data given in the arguments (cycles, temperatures, outside
     temperatures, by day. Only days in which all data types have one or more
@@ -97,16 +98,16 @@ def daily_cycle_and_temp_obs_counts(id, cycles_df, inside_df, outside_df,
     Args:
         id (int): The ID of the thermostat.
 
+        thermostats_file(str): Path of thermostats file.
+
         cycles_df (pandas DataFrame): DataFrame as created by **history**
         module.
 
         inside_df (pandas DataFrame): DataFrame as created by **history**
         module.
 
-        outside_df (pandas DataFrame): DataFrame as created by
+        outside_df (Optional: pandas DataFrame): DataFrame as created by
         **history** module.
-
-        thermostats_file(str): Path of thermostats file.
 
     Returns:
         daily_obs_df (pandas DataFrame): DataFrame with index of the date, and
@@ -274,9 +275,9 @@ def earliest_cooling_minute_in_year(df_type):
 
 
 def number_of_days(df):
-    """Determines number of days of data for df."""
+    """Determines number of days between first and last day of data for df."""
     first_day, last_day = first_and_last_days_df(df)
-    return (last_day - first_day + 1)/np.timedelta64(1, 'D')
+    return (last_day - first_day)/np.timedelta64(1, 'D')
 
 
 def start_of_first_full_day_df(cycle_df):
