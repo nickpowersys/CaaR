@@ -22,32 +22,40 @@ def create_inside_df(dict_or_pickle_file, thermo_ids=None):
     and ending.
 
     Args:
-        dict_or_pickle_file (dict or str): Must be created with dict_from_file() or pickle_from_file() function.
+        dict_or_pickle_file (dict or str): Must be created with
+        dict_from_file() or pickle_from_file() function.
 
-        thermo_ids (Optional: list or other iterable of ints): Thermostat IDs. If no argument is specified, all IDs from the first arg will be in the DataFrame.
+        thermo_ids (Optional: list or other iterable of ints): Thermostat IDs.
+        If no argument is specified, all IDs from the first arg will be in the
+        DataFrame.
 
     Returns:
-        inside_idf (pandas DataFrame): DataFrame has multi-index based on the ID(s) and timestamps.
+        inside_df (pandas DataFrame): DataFrame has multi-index based on the
+        ID(s) and timestamps.
     """
     multi_ids, vals = _records_as_lists_of_tuples(dict_or_pickle_file,
                                                   'thermo_id', 'log_date',
                                                   ids=thermo_ids)
-    inside_df = _create_multi_index_df([INSIDE_DEVICE_ID, INSIDE_LOG_DATE], multi_ids,
-                                       [INSIDE_DEGREES], vals)
+    inside_df = _create_multi_index_df([INSIDE_DEVICE_ID, INSIDE_LOG_DATE],
+                                       multi_ids, [INSIDE_DEGREES], vals)
     return inside_df
 
 
 def create_cycles_df(dict_or_pickle_file, thermo_ids=None):
-    """Returns pandas DataFrame containing thermostat ids and cycle beginning time stamps as multi-part indexes, and
-    cycle ending times as values.
+    """Returns pandas DataFrame containing thermostat ids and cycle beginning
+    time stamps as multi-part indexes, and cycle ending times as values.
 
     Args:
-        dict_or_pickle_file (dict or str): Must be created with dict_from_file() or pickle_from_file() function.
+        dict_or_pickle_file (dict or str): Must be created with
+        dict_from_file() or pickle_from_file() function.
 
-        thermo_ids (Optional: list or other iterable of ints): Thermostat IDs. If no  argument is specified, all IDs from the first arg will be in the DataFrame.
+        thermo_ids (Optional: list or other iterable of ints): Thermostat IDs.
+        If no  argument is specified, all IDs from the first arg will be in
+        the DataFrame.
 
     Returns:
-        cycles_df (pandas DataFrame): DataFrame has multi-index based on the ID(s) and timestamps.
+        cycles_df (pandas DataFrame): DataFrame has multi-index based on the
+        ID(s) and timestamps.
     """
     multi_ids, vals = _records_as_lists_of_tuples(dict_or_pickle_file,
                                                   'thermo_id', 'start_time',
@@ -58,26 +66,32 @@ def create_cycles_df(dict_or_pickle_file, thermo_ids=None):
 
 
 def create_outside_df(dict_or_pickle_file, location_ids=None):
-    """Returns pandas DataFrame containing records with location ids and time stamps as multi-part indexes and
-    outdoor temperatures as values.
+    """Returns pandas DataFrame containing records with location ids and time
+    stamps as multi-part indexes and outdoor temperatures as values.
 
     Args:
-        dict_or_pickle_file (dict or str): Must be created with dict_from_file() or pickle_from_file() function.
+        dict_or_pickle_file (dict or str): Must be created with
+        dict_from_file() or pickle_from_file() function.
 
-        location_ids (Optional: list or other iterable of ints): If no Location ID(s) argument is specified, all IDs from the first arg will be in the DataFrame.
+        location_ids (Optional: list or other iterable of ints): If no
+        Location ID(s) argument is specified, all IDs from the first arg will
+        be in the DataFrame.
 
     Returns:
-        outside_df (pandas DataFrame): DataFrame has multi-index based on the ID(s) and timestamps.
+        outside_df (pandas DataFrame): DataFrame has multi-index based on the
+        ID(s) and timestamps.
     """
     multi_ids, vals = _records_as_lists_of_tuples(dict_or_pickle_file,
                                                   'location_id', 'log_date',
                                                   ids=location_ids)
-    outside_df = _create_multi_index_df([OUTSIDE_LOCATION_ID, OUTSIDE_LOG_DATE],
-                                        multi_ids, [OUTSIDE_DEGREES], vals)
+    outside_df = _create_multi_index_df([OUTSIDE_LOCATION_ID,
+                                         OUTSIDE_LOG_DATE], multi_ids,
+                                        [OUTSIDE_DEGREES], vals)
     return outside_df
 
 
-def _records_as_lists_of_tuples(dict_or_pickle_file, id_field, time_field, ids=None):
+def _records_as_lists_of_tuples(dict_or_pickle_file, id_field, time_field,
+                                ids=None):
     """Returns tuple containing
     1) a list of named tuples containing thermostat (or outdoor location) ids
     and time stamps and
@@ -93,12 +107,10 @@ def _records_as_lists_of_tuples(dict_or_pickle_file, id_field, time_field, ids=N
         except ValueError:
             print('The first argument must be a pickle file or dict.')
 
-    record_keys_copy = list(records.keys())
-    random_record_key = random.choice(record_keys_copy)
-    random_record = records[random_record_key]
+    random_record = random_record_from_dict(records, value_only=True)
     data_type = _determine_if_temperature_or_time_data(random_record)
     if ids is not None:
-        for record_key in record_keys_copy:
+        for record_key in list(records.keys()):
             # Discard record if it is not among the desired ids.
             if getattr(record_key, id_field) not in ids:
                 records.pop(record_key, None)
@@ -114,15 +126,27 @@ def _records_as_lists_of_tuples(dict_or_pickle_file, id_field, time_field, ids=N
     return (multi_ids, vals)
 
 
+def random_record_from_dict(records, value_only=False):
+    """Returns a randomly chosen key-value pair from a dict."""
+    copied_keys = list(records.keys())
+    random_record_key = random.choice(copied_keys)
+    if value_only:
+        return records[random_record_key]
+    else:
+        return (random_record_key, records[random_record_key])
+
+
 def _determine_if_temperature_or_time_data(record_data):
-    """Returns 'temperature' or 'time' (a string) based on the content of the
+    """Returns 'temperature' or 'time_stamp' (a string) based on the content of the
     value in a dict item.
     """
     if isinstance(record_data, tuple):
         try:
-            assert isinstance(_datetime_from_string(record_data[0]), dt.datetime)
+            assert isinstance(_datetime_from_string(record_data[0]),
+                              dt.datetime)
         except ValueError:
-            print('The data field from the tuple does not match the given time format.')
+            print('The data field from the tuple does not match the given '
+                  'time format.')
         else:
             return 'time_stamp'
     else:
@@ -153,7 +177,8 @@ def _temps_multi_ids(records, id_field, time_field):
 
 def _cycles_multi_ids(records, id_field, time_field):
     """Returns tuple containing
-    1) a list of named tuples containing outdoor location ids and time stamps and
+    1) a list of named tuples containing outdoor location ids and time stamps
+    and
     2) a list of ending times of cycles, based on a dict.
     """
     multi_ids = []
