@@ -46,7 +46,7 @@ def consecutive_days_of_observations(id, thermostats_file, cycles_df,
 
         inside_df (pandas DataFrame): DataFrame as created by **history** module.
 
-        outside_df (Optional: pandas DataFrame): DataFrame as created by **history** module.
+        outside_df (Optional[pandas DataFrame]): DataFrame as created by **history** module.
 
     Returns:
         consecutive_days_df (pandas DataFrame): DataFrame with 'First Day',
@@ -102,7 +102,7 @@ def daily_cycle_and_temp_obs_counts(id, thermostats_file, cycles_df, inside_df,
 
         inside_df (pandas DataFrame): DataFrame as created by **history** module.
 
-        outside_df (Optional: pandas DataFrame): DataFrame as created by **history** module.
+        outside_df (Optional[pandas DataFrame]): DataFrame as created by **history** module.
 
     Returns:
         daily_obs_df (pandas DataFrame): DataFrame with index of the date, and
@@ -145,7 +145,7 @@ def daily_data_points_by_id(df, id=None):
     Args:
         df (pandas DataFrame): DataFrame as created by **history** module.
 
-        id (Optional: int): The ID of a thermostat.
+        id (Optional[int]): The ID of a thermostat.
 
     Returns:
         daily_obs_df (pandas DataFrame): DataFrame indexed by date, and
@@ -167,12 +167,9 @@ def df_select_ids(df, id_or_ids):
     (thermostat ID, or location ID in the case of outside temperatures).
 
     Args:
-        df (pandas DataFrame): DataFrame that has been created by a function
-        in the **history** or **histsummary** modules (it must have a numeric
-        id as the first or only index column).
+        df (pandas DataFrame): DataFrame that has been created by a function in the **history** or **histsummary** modules (it must have a numeric id as the first or only index column).
 
-        id_or_ids (int, list of ints, or tuple): A tuple should have the form
-        (min_ID,max_ID)
+        id_or_ids (int, list of ints, or tuple): A tuple should have the form (min_ID,max_ID)
 
     Returns:
         daily_obs (pandas DataFrame)
