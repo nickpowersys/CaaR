@@ -22,15 +22,12 @@ def create_inside_df(dict_or_pickle_file, thermo_ids=None):
     and ending.
 
     Args:
-        dict_or_pickle_file (dict or str): Must be created with
-        dict_from_file() or pickle_from_file() function.
+        dict_or_pickle_file (dict or str): The object must have been created with dict_from_file() or pickle_from_file() function.
 
-        thermo_ids (Optional: list or other iterable of ints): Thermostat IDs.
-        If no argument is specified, all IDs from the first arg will be in the
-        DataFrame.
+        thermo_ids (Optional: list or other iterable of ints): Thermostat IDs. If no argument is specified, all IDs from the first arg will be in the DataFrame.
 
     Returns:
-        inside_df (pandas DataFrame): DataFrame has multi-index based on the
+        inside_df (pandas DataFrame): DataFrame has MultiIndex based on the
         ID(s) and timestamps.
     """
     multi_ids, vals = _records_as_lists_of_tuples(dict_or_pickle_file,
@@ -46,16 +43,12 @@ def create_cycles_df(dict_or_pickle_file, thermo_ids=None):
     time stamps as multi-part indexes, and cycle ending times as values.
 
     Args:
-        dict_or_pickle_file (dict or str): Must be created with
-        dict_from_file() or pickle_from_file() function.
+        dict_or_pickle_file (dict or str): Must have been created with dict_from_file() or pickle_from_file() function.
 
-        thermo_ids (Optional: list or other iterable of ints): Thermostat IDs.
-        If no  argument is specified, all IDs from the first arg will be in
-        the DataFrame.
+        thermo_ids (Optional: list or other iterable of ints): Thermostat IDs. If no  argument is specified, all IDs from the first arg will be in the DataFrame.
 
     Returns:
-        cycles_df (pandas DataFrame): DataFrame has multi-index based on the
-        ID(s) and timestamps.
+        cycles_df (pandas DataFrame): DataFrame has MultiIndex based on the ID(s) and timestamps.
     """
     multi_ids, vals = _records_as_lists_of_tuples(dict_or_pickle_file,
                                                   'thermo_id', 'start_time',
@@ -70,16 +63,12 @@ def create_outside_df(dict_or_pickle_file, location_ids=None):
     stamps as multi-part indexes and outdoor temperatures as values.
 
     Args:
-        dict_or_pickle_file (dict or str): Must be created with
-        dict_from_file() or pickle_from_file() function.
+        dict_or_pickle_file (dict or str): Must have been created with dict_from_file() or pickle_from_file() function.
 
-        location_ids (Optional: list or other iterable of ints): If no
-        Location ID(s) argument is specified, all IDs from the first arg will
-        be in the DataFrame.
+        location_ids (Optional: list or other iterable of ints): Location IDs. If no argument is specified, all IDs from the first arg will be in the DataFrame.
 
     Returns:
-        outside_df (pandas DataFrame): DataFrame has multi-index based on the
-        ID(s) and timestamps.
+        outside_df (pandas DataFrame): DataFrame has MultiIndex based on the ID(s) and timestamps.
     """
     multi_ids, vals = _records_as_lists_of_tuples(dict_or_pickle_file,
                                                   'location_id', 'log_date',

@@ -178,8 +178,8 @@ def test_temps_by_interval(df_fixture, id, start, end, freq):
                            outside_df_fixture(), TEST_THERMOSTATS_FILE)])
 def test_single_day_cycling_and_temps(thermo_id, start, end, freq, cycle_df,
                                       inside_df, outside_df, thermo_file):
-    single_day_arr = hd.single_day_cycling_and_temps(thermo_id, start, end, freq, cycle_df,
-                                                     inside_df, outside_df, thermo_file)
+    single_day_arr = hd.time_series_cycling_and_temps(thermo_id, start, end, freq, cycle_df,
+                                                      inside_df, outside_df, thermo_file)
     assert isinstance(single_day_arr[0], np.ndarray)
     assert isinstance(single_day_arr[1], np.ndarray)
     assert single_day_arr[1].shape[1] == 3

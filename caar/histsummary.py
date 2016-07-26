@@ -35,20 +35,18 @@ def consecutive_days_of_observations(id, thermostats_file, cycles_df,
     Returns a pandas DataFrame with a row for each date range indicating the
     number of consecutive days of data across all DataFrames given as
     arguments. The starting and ending day of each date range are also given.
+    Only days in which all data types have one or more observations are included.
 
     Args:
         id (int): The ID of the thermostat.
 
         thermostats_file(str): Path of thermostats file.
 
-        cycles_df (pandas DataFrame): DataFrame as created by **history**
-        module.
+        cycles_df (pandas DataFrame): DataFrame as created by **history** module.
 
-        inside_df (pandas DataFrame): DataFrame as created by **history**
-        module.
+        inside_df (pandas DataFrame): DataFrame as created by **history** module.
 
-        outside_df (Optional: pandas DataFrame): DataFrame as created by
-        **history** module.
+        outside_df (Optional: pandas DataFrame): DataFrame as created by **history** module.
 
     Returns:
         consecutive_days_df (pandas DataFrame): DataFrame with 'First Day',
@@ -92,7 +90,7 @@ def daily_cycle_and_temp_obs_counts(id, thermostats_file, cycles_df, inside_df,
                                     outside_df=None):
     """Returns a pandas DataFrame with the count of observations of each type
     of data given in the arguments (cycles, temperatures, outside
-    temperatures, by day. Only days in which all data types have one or more
+    temperatures), by day. Only days in which all data types have one or more
     observations are included.
 
     Args:
@@ -100,14 +98,11 @@ def daily_cycle_and_temp_obs_counts(id, thermostats_file, cycles_df, inside_df,
 
         thermostats_file(str): Path of thermostats file.
 
-        cycles_df (pandas DataFrame): DataFrame as created by **history**
-        module.
+        cycles_df (pandas DataFrame): DataFrame as created by **history** module.
 
-        inside_df (pandas DataFrame): DataFrame as created by **history**
-        module.
+        inside_df (pandas DataFrame): DataFrame as created by **history** module.
 
-        outside_df (Optional: pandas DataFrame): DataFrame as created by
-        **history** module.
+        outside_df (Optional: pandas DataFrame): DataFrame as created by **history** module.
 
     Returns:
         daily_obs_df (pandas DataFrame): DataFrame with index of the date, and
@@ -143,27 +138,18 @@ def daily_cycle_and_temp_obs_counts(id, thermostats_file, cycles_df, inside_df,
                                              'Degrees': 'Inside_obs'})
 
 
-def location_id_of_thermo(thermo_id, thermostats_file):
-    thermostat_df = pd.read_csv(thermostats_file,
-                                usecols=[THERMOSTAT_DEVICE_ID,
-                                         THERMOSTAT_LOCATION_ID],
-                                index_col=0)
-    idx = pd.IndexSlice
-    return thermostat_df.loc[idx[thermo_id, THERMOSTAT_LOCATION_ID]]
-
-
 def daily_data_points_by_id(df, id=None):
-    """Return a pandas DataFrame with MultiIndex of ID and time grouping,
-    and the count of non-null raw data points per id and time group as values.
+    """Return a pandas DataFrame with MultiIndex of ID and day,
+    and the count of non-null raw data points per id and day as values.
 
-        Args:
+    Args:
         df (pandas DataFrame): DataFrame as created by **history** module.
 
         id (Optional: int): The ID of a thermostat.
 
     Returns:
-        daily_obs_df (pandas DataFrame): DataFrame with index of the date, and
-        values of 'Cycles_obs', 'Inside_obs', and 'Outside_obs'.
+        daily_obs_df (pandas DataFrame): DataFrame indexed by date, and
+        with counts of observations as values.
     """
     # 1) Groups the DataFrame by the primary ID and by time.
     # 2) Gives count of records within groups.
@@ -176,15 +162,6 @@ def daily_data_points_by_id(df, id=None):
     return daily_df
 
 
-def counts_by_primary_id(df):
-    """Return dict with IDs as keys and total number (int) of observations
-     of data as values, based on the DataFrame (df) passed as an argument."""
-    return (df
-            .groupby(level=0)
-            .count()
-            .to_dict())
-
-
 def df_select_ids(df, id_or_ids):
     """Return pandas DataFrame that is restricted to a particular ID or IDs
     (thermostat ID, or location ID in the case of outside temperatures).
@@ -194,12 +171,11 @@ def df_select_ids(df, id_or_ids):
         in the **history** or **histsummary** modules (it must have a numeric
         id as the first or only index column).
 
-        id_or_ids (int, list of ints, or tuple): A tuple should hav the form
+        id_or_ids (int, list of ints, or tuple): A tuple should have the form
         (min_ID,max_ID)
 
     Returns:
         daily_obs (pandas DataFrame)
-
     """
     idx = pd.IndexSlice
     if isinstance(id_or_ids, tuple):
@@ -213,6 +189,56 @@ def df_select_ids(df, id_or_ids):
             return pd.DataFrame(df.loc[idx[id_or_ids, :], :])
         else:
             return pd.DataFrame(df.loc[idx[id_or_ids], :])
+
+
+def count_of_data_points_for_each_id(df):
+    """Return dict with IDs as keys and total number (int) of observations of data as values, based on the DataFrame (df) passed as an argument.
+
+    Args:
+        df (pandas DataFrame): DataFrame as created by **history** module.
+
+    Returns:
+        counts_by_id (dict): Dict of key-value pairs, in which IDs are keys.
+     """
+    return (df
+            .groupby(level=0)
+            .count()
+            .to_dict())
+
+
+def count_of_data_points_for_select_id(id, df):
+    """Returns number of observations for the specified thermostat or location
+    within a DataFrame.
+
+    Args:
+        id (int): ID of thermostat or location.
+
+        df (pandas DataFrame): DataFrame as created by **history** module.
+
+    Returns:
+        data_points_df (int): Number of observations for the given ID in the DataFrame.
+    """
+    idx = pd.IndexSlice
+    return df.loc[idx[id, :], :].count()
+
+
+def location_id_of_thermo(thermo_id, thermostats_file):
+    """Returns location ID for a thermostat, based on thermostat ID.
+
+    Args:
+        thermo_id (int): Thermostat ID.
+
+        thermostats_file (str): Thermostats file.
+
+    Returns:
+        location_id (int): Location ID.
+    """
+    thermostat_df = pd.read_csv(thermostats_file,
+                                usecols=[THERMOSTAT_DEVICE_ID,
+                                         THERMOSTAT_LOCATION_ID],
+                                index_col=0)
+    idx = pd.IndexSlice
+    return thermostat_df.loc[idx[thermo_id, THERMOSTAT_LOCATION_ID]]
 
 
 def squared_avg_daily_data_points_per_id(df):
@@ -230,23 +256,20 @@ def squared_avg_daily_data_points_per_id(df):
 
 
 def counts_by_primary_id_squared(df):
+    """Returns dict with IDs as keys and the number of data observations
+    in the DataFrame argument as values.
+
+    Args:
+        df (pandas DataFrame):
+
+    Returns:
+        counts_by_id (dict): Dict.
+    """
     return (df
             .groupby(level=0)
             .count()
             .apply(lambda x: x ** 2)
             .to_dict())
-
-
-def matching_ids_all_dfs(cycles_df, inside_df, outside_df):
-    """Return a dict with thermostat ids as keys and location ids as values.
-    The purpose is to get only the devices that at least have data on cycling,
-    indoor and outdoor temperature data.
-    """
-    dfs = [cycles_df, inside_df, outside_df]
-    cycles_ids, inside_ids, outside_ids = (df.get_level_values(level=0)
-                                           for df in dfs)
-    cycles_intersect_inside = cycles_ids.intersection(inside_ids)
-    return dict(map(location_id_of_thermo(cycles_intersect_inside)))
 
 
 def first_full_day_of_inside_temperature_data(df):
@@ -267,11 +290,6 @@ def first_and_last_days_cycling(df):
     return (first_full_day_of_inside_temperature_data(df),
             last_full_day_of_inside_temperature_data(df))
 
-
-def earliest_cooling_minute_in_year(df_type):
-    """For all days with cooling cycles in a year,
-    the earliest minute in any day.
-    """
 
 
 def number_of_days(df):
@@ -335,6 +353,17 @@ def count_inside_temp_by_thermo_id(df):
 def count_inside_temps_in_intervals_for_thermo_id(df, id, interval='D'):
     """Returns the count of inside temperature readings for a thermostat by
     interval (defaults to daily).
+
+    Args:
+        df (pandas DataFrame): DataFrame as created by **history** module.
+
+        id (int): ID of thermostat.
+
+        interval (str): interval (pandas format). Defaults to daily.
+
+    Returns:
+        count_temps_df (pandas DataFrame): pandas DataFrame with the interval
+        and the count of observations by interval.
     """
     idx = pd.IndexSlice
     count_temps_per_day = (df.loc[idx[id, :], [INSIDE_TEMP_FIELD]]
@@ -342,12 +371,9 @@ def count_inside_temps_in_intervals_for_thermo_id(df, id, interval='D'):
                            .groupby(THERMO_ID_FIELD)
                            .resample(interval)
                            .count())
-    print(count_temps_per_day)
+    return count_temps_per_day
 
 
-def data_points_per_primary_id(id, df):
-    idx = pd.IndexSlice
-    return df.loc[idx[id, :], :].count()
 
 
 def dt_timedelta_from_frequency(freq):
