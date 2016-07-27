@@ -25,8 +25,8 @@ Dependencies:
 * SciPy
 * pandas
 * click
-* py
-* pytest
+
+
 
 Documentation is at  `http://caar.readthedocs.io/en/latest/ <http://caar.readthedocs.io/en/latest/>`_
 

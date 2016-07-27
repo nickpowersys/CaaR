@@ -18,11 +18,10 @@ This project is intended to accelerate analysis of timestamped data including th
 
 ### Dependencies
 
-* Python 3.4
+* Python 3.4+
 * NumPy
 * SciPy
 * pandas
-* py
 * click
 
 Documentation is at  http://caar.readthedocs.io/en/latest/
