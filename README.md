@@ -28,9 +28,13 @@ Documentation is at  http://caar.readthedocs.io/en/latest/
 
 Begin by reviewing the sample input files in the data directory at https://github.com/nickpowersys/CaaR, within the data folder.
 
+Functions in each module build on output from the previous module.
+
 **Cleanthermostat module**: In addition to using functions in the cleanthermostat module to create a dict or pickle file, it is also possible to run the script in picklert.py (seen in the caar folder) from the command line in order to create a pickle file based on a delimited text file. Instructions are given in the source code comments of picklert.py itself. A binary output file with a .pickle extension will be created.
 
-**History module**: Once a pickle file or dict is created with the cleanthermostat module, the file name or dict can be used as an argument in order to easily create a pandas DataFrame using the DataFrame creation functions in the history module. The DataFrame will have a multi-field index (using IDs and time stamps). Other functions convert the DataFrames to NumPy arrays for deeper data analysis.
+**History module**: Once a pickle file or dict is created with the cleanthermostat module, the file name or dict can be used as an argument in order to easily create a pandas DataFrame using the DataFrame creation functions in the history module. The DataFrame will have a multi-field index, or pandas MultiIndex (using IDs and time stamps).
+
+**Histdaily module**: The functions in this module convert the observations from the **history** module into time series in NumPy arrays, for plotting/visualization and deeper data analysis.
 
 ## Contributors
 
