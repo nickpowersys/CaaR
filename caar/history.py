@@ -17,7 +17,7 @@ Outside = namedtuple('Outside', ['location_id', 'log_date'])
 
 
 def create_inside_df(dict_or_pickle_file, thermo_ids=None):
-    """Returns pandas DataFrame containing thermostat id, time stamps and
+    """Returns pandas DataFrame containing thermostat ID, timestamps and
     inside temperatures at the time of cooling (or heating) cycles starting
     and ending.
 
@@ -40,7 +40,7 @@ def create_inside_df(dict_or_pickle_file, thermo_ids=None):
 
 def create_cycles_df(dict_or_pickle_file, thermo_ids=None):
     """Returns pandas DataFrame containing thermostat ids and cycle beginning
-    time stamps as multi-part indexes, and cycle ending times as values.
+    timestamps as multi-part indexes, and cycle ending times as values.
 
     Args:
         dict_or_pickle_file (dict or str): Must have been created with dict_from_file() or pickle_from_file() function.
@@ -59,7 +59,7 @@ def create_cycles_df(dict_or_pickle_file, thermo_ids=None):
 
 
 def create_outside_df(dict_or_pickle_file, location_ids=None):
-    """Returns pandas DataFrame containing records with location ids and time
+    """Returns pandas DataFrame containing records with location IDs and time
     stamps as multi-part indexes and outdoor temperatures as values.
 
     Args:
@@ -83,7 +83,7 @@ def _records_as_lists_of_tuples(dict_or_pickle_file, id_field, time_field,
                                 ids=None):
     """Returns tuple containing
     1) a list of named tuples containing thermostat (or outdoor location) ids
-    and time stamps and
+    and timestamps and
     2) a list of either indoor (or outdoor) temperatures, or the ending time
     of a cycle, based on input of a pickle file containing a dict.
     """
@@ -149,7 +149,7 @@ def _determine_if_temperature_or_time_data(record_data):
 
 def _temps_multi_ids(records, id_field, time_field):
     """Returns tuple containing
-    1) a list of named tuples containing thermostat ids and time stamps and
+    1) a list of named tuples containing thermostat ids and timestamps and
     2) a list of either indoor (or outdoor) temperatures, based on items
     (records) in a dict.
     """
@@ -166,7 +166,7 @@ def _temps_multi_ids(records, id_field, time_field):
 
 def _cycles_multi_ids(records, id_field, time_field):
     """Returns tuple containing
-    1) a list of named tuples containing outdoor location ids and time stamps
+    1) a list of named tuples containing outdoor location IDs and timestamps
     and
     2) a list of ending times of cycles, based on a dict.
     """
@@ -187,7 +187,7 @@ def _datetime_from_string(time_string):
 
 def _create_multi_index_df(multiindex_names, multi_ids, column_names, values):
     """Returns MultiIndex pandas dataframe in which the index columns are for
-    an id and time stamp and the value is for a temperature or a time stamp
+    an id and timestamp and the value is for a temperature or a timestamp
     indicating the end of a cycle.
     """
     multiindex_columns = tuple(multiindex_names)

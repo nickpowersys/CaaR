@@ -37,7 +37,7 @@ def dict_from_file(raw_file, cycle=CYCLE_TYPE_COOL, states=None,
 
     Thermostat cycle files should have these headings and corresponding row
     values: "ThermostatId", "CycleType", "StartTime", "EndTime", and three
-    additional columns, (dummy headings and values may be used).
+    additional columns (dummy headings and values may be used).
 
     Inside temperature files should have these headings and corresponding row
     values: "ThermostatId", "LogDate", "Degrees".
@@ -95,7 +95,7 @@ def pickle_from_file(raw_file, picklepath=None, cycle=CYCLE_TYPE_COOL,
 
     Thermostat cycle files should have these headings and corresponding row
     values: "ThermostatId", "CycleType", "StartTime", "EndTime", and three
-    additional columns, (dummy headings and values may be used).
+    additional columns (dummy headings and values may be used).
 
     Inside temperature files should have these headings and corresponding row
     values: "ThermostatId", "LogDate", "Degrees".
@@ -195,7 +195,7 @@ def _dict_from_lines_of_text(lines_to_clean, header, **kwargs):
 
 
 def _clean_inside(lines, **kwargs):
-    """Return dict for inside temperatures, which may be filtered using
+    """Returns dict for inside temperatures, which may be filtered using
     'states' parameter, a string that is a comma-separated series of state
     abbreviations.
     """
@@ -218,7 +218,7 @@ def _clean_inside(lines, **kwargs):
 
 
 def _clean_inside_all_states(lines):
-    """Return dict for inside temperatures recorded by thermostats, regardless
+    """Returns dict for inside temperatures recorded by thermostats, regardless
     of state."""
     clean_records = {}
     for line in lines:
@@ -246,7 +246,7 @@ def _validate_inside_record(record, ids=None):
 
 
 def _clean_cycles(lines, **kwargs):
-    """Return dict for cycling start and end times for thermostats, which may
+    """Returns dict for cycling start and end times for thermostats, which may
     be filtered using 'states' parameter, a string that is a comma-separated
     series of state abbreviations.
     """
@@ -273,7 +273,7 @@ def _clean_cycles(lines, **kwargs):
 
 
 def _clean_cycles_all_states(lines, cycle):
-    """Return dict for cycle start and end times of thermostats, regardless of
+    """Returns dict for cycle start and end times of thermostats, regardless of
     state.
     """
     clean_records = {}
@@ -305,7 +305,7 @@ def _validate_cycles_record(record, ids=None, cycle=None):
 
 
 def _clean_outside(lines, **kwargs):
-    """Return dict for outdoor temperatures by location, which may be filtered
+    """Returns dict for outdoor temperatures by location, which may be filtered
     using 'states' parameter, a string that is a comma-separated series of
     state abbreviations.
     """
@@ -325,7 +325,7 @@ def _clean_outside(lines, **kwargs):
 
 
 def _clean_outside_all_states(lines):
-    """Return dict for outdoor temperatures by location, regardless of
+    """Returns dict for outdoor temperatures by location, regardless of
     state.
     """
     clean_records = {}
@@ -353,14 +353,14 @@ def _validate_outside_record(record, ids=None):
 
 
 def _locations_in_states(**kwargs):
-    """Return location IDs for locations in specified states."""
+    """Returns location IDs for locations in specified states."""
     thermos_states_df = _thermostats_states(**kwargs)
     location_ids_in_states = thermos_states_df[THERMOSTAT_LOCATION_ID].unique()
     return location_ids_in_states
 
 
 def _thermostats_states(**kwargs):
-    """Return pandas dataframe with thermostat metadata and location
+    """Returns pandas dataframe with thermostat metadata and location
     information for thermostats in specified states.
     """
     postal_file = kwargs.get('postal_file')
@@ -374,7 +374,7 @@ def _thermostats_states(**kwargs):
 
 
 def _zip_codes_in_states(postal_file, states):
-    """Return pandas dataframe based on postal code metadata file, for states
+    """Returns pandas dataframe based on postal code metadata file, for states
      specified as list.
      """
     zip_code = POSTAL_FILE_ZIP
@@ -393,7 +393,7 @@ def _zip_codes_in_states(postal_file, states):
 
 
 def _thermostats_df(thermostats_file, postal_file):
-    """Return pandas dataframe of thermostat metadata from raw file."""
+    """Returns pandas dataframe of thermostat metadata from raw file."""
     zip_code = THERMOSTAT_ZIP_CODE
     dtype_thermostat_zip = {zip_code: 'str'}
     if os.path.splitext(postal_file)[1] == '.csv':
@@ -430,7 +430,7 @@ def _cycle_record_vals(record):
 
 
 def _parse_line(line):
-    """Return tuple of elements from line in comma-separated text file."""
+    """Returns tuple of elements from line in comma-separated text file."""
     line_no_newline = line.rstrip('\n')
     if _line_is_record(line_no_newline):
         line_items = tuple(line_no_newline.split(','))
@@ -446,7 +446,7 @@ def _line_is_record(line):
 
 
 def _remove_quotes(string):
-    """Return line of file without leading or trailing quotes surrounding the
+    """Returns line of file without leading or trailing quotes surrounding the
     entire line.
     """
     if string.startswith('"') and string.endswith('"'):
@@ -457,7 +457,7 @@ def _remove_quotes(string):
 
 
 def _numeric_leads(record):
-    """Return True if all characters in the leading string element in a
+    """Returns True if all characters in the leading string element in a
     sequence are digits.
     """
     return True if record[0].isdigit() else False

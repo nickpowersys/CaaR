@@ -10,7 +10,7 @@ from caar.configparser_read import OUTSIDE_TIMESTAMP_LABEL,               \
 
 
 def days_of_data_by_id(df):
-    """Return pandas DataFrame with ID as index and the number of calendar
+    """Returns pandas DataFrame with ID as index and the number of calendar
     days of data as values.
 
     Args:
@@ -139,7 +139,7 @@ def daily_cycle_and_temp_obs_counts(id, thermostats_file, cycles_df, inside_df,
 
 
 def daily_data_points_by_id(df, id=None):
-    """Return a pandas DataFrame with MultiIndex of ID and day,
+    """Returns a pandas DataFrame with MultiIndex of ID and day,
     and the count of non-null raw data points per id and day as values.
 
     Args:
@@ -163,13 +163,13 @@ def daily_data_points_by_id(df, id=None):
 
 
 def df_select_ids(df, id_or_ids):
-    """Return pandas DataFrame that is restricted to a particular ID or IDs
+    """Returns pandas DataFrame that is restricted to a particular ID or IDs
     (thermostat ID, or location ID in the case of outside temperatures).
 
     Args:
-        df (pandas DataFrame): DataFrame that has been created by a function in the **history** or **histsummary** modules (it must have a numeric id as the first or only index column).
+        df (pandas DataFrame): DataFrame that has been created by a function in the **history** or **histsummary** modules (it must have a numeric ID as the first or only index column).
 
-        id_or_ids (int, list of ints, or tuple): A tuple should have the form (min_ID,max_ID)
+        id_or_ids (int, list of ints, or tuple): A tuple should have the form (min_ID, max_ID)
 
     Returns:
         daily_obs (pandas DataFrame)
@@ -189,7 +189,7 @@ def df_select_ids(df, id_or_ids):
 
 
 def count_of_data_points_for_each_id(df):
-    """Return dict with IDs as keys and total number (int) of observations of data as values, based on the DataFrame (df) passed as an argument.
+    """Returns dict with IDs as keys and total number (int) of observations of data as values, based on the DataFrame (df) passed as an argument.
 
     Args:
         df (pandas DataFrame): DataFrame as created by **history** module.
@@ -374,7 +374,7 @@ def count_inside_temps_in_intervals_for_thermo_id(df, id, interval='D'):
 
 
 def dt_timedelta_from_frequency(freq):
-    """Return a datetime.timedelta object based on the input arg freq, which is
+    """Returns a datetime.timedelta object based on the input arg freq, which is
      a string.
      """
     freq_codes = ['H', 'min', 'T', 'S']
