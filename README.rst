@@ -9,7 +9,11 @@ The primary data is expected to be from these main sources (but is not limited t
 * indoor temperature data, and
 * local weather observations
 
-Although they may be recorded independently, data can be matched based on devices, locations and time, in order to form multi-dimensional time series. The flexible approach can easily accommodate source data using many possible column orderings and column/field names within comma- or tab-delimited text files.
+Although they may be recorded independently, data can be matched based on devices, locations and time, in order to form multi-dimensional time series.
+
+In order to maximize the utility of the package, it is possible to git clone the project, modify the configuration file, config.ini, and modify the values specified there that indicate the column headings (labels) and their positions (index) within a set of delimited text files. The example data files within the data folder are consistent with the current mapping in config.ini, and therefore provide a starting reference.
+
+Note the need for metadata files for both thermostats and zip codes. Example files are also in the data folder.
 
 Motivation
 ==========
@@ -17,7 +21,7 @@ Motivation
 This project is intended to accelerate analysis of timestamped data including thermostat operations at the device level and temperature data (indoor or outdoor) by putting them in an indexed form that is suitable for analysis in aggregated form and at the device level. It contains higher-level functions that support analysis of the data in various domains, further summarizing and helping to visualize the observations from a time series perspective easily. The ultimate intent is to support further analysis, either through forward or inverse modeling related to HVAC control, power systems or energy efficiency research.
 
 Installation and How to Start Using
-===========================
+===================================
 
 
 **Dependencies:**
