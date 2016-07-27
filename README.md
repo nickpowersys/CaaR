@@ -8,7 +8,7 @@ The primary data is expected to be from these main sources of time-stamped data 
 * indoor temperature data, and
 * local outdoor temperature data
 
-Although they may be recorded independently, data can be matched based on devices, locations and time, in order to form multi-dimensional time series. The flexible approach can easily accommodate source data using many possible column orderings and column/field names within comma- or tab-delimited text files.
+Although they may be recorded independently, data can be matched based on devices, locations and time, in order to form multi-dimensional time series.
 
 ## Motivation
 
