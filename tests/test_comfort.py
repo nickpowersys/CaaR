@@ -220,7 +220,7 @@ def test_min_and_max_outdoor_temp_by_id(df, id, minimum_records):
                           ('2min', pd.Timedelta(dt.timedelta(seconds=120))),
                           ('min', pd.Timedelta(dt.timedelta(seconds=60)))])
 def test_timedelta_from_string(min_s_string, pd_timedelta):
-    assert hd.timedelta_from_string(min_s_string) == pd_timedelta
+    assert hd._timedelta_from_string(min_s_string) == pd_timedelta
 
 
 @slow
