@@ -1,3 +1,5 @@
+import datetime as dt
+
 import numpy as np
 import pandas as pd
 
@@ -131,12 +133,20 @@ def _raw_temp_arr_by_freq(df, id, start, end, freq='1min'):
 
 
 def _index_of_timestamp(first_interval, interval, frequency):
-    # earlier = pd.Timedelta(first_interval)
-    # later = pd.Timedelta(interval)  # problem
-    # interval_delta = later - earlier
     interval_delta = interval - first_interval
-    # interval_delta = pd.Timedelta(interval) - pd.Timedelta(first_interval)
-    freq = timedelta_from_string(frequency)
-    # timedelta_freq = pd.Timedelta(1, unit=frequency)
-    # return interval_delta / timedelta_freq
+    freq = _timedelta_from_string(frequency)
     return interval_delta / freq
+
+
+def _timedelta_from_string(delta):
+    minsplit = delta.split('min')
+    if len(minsplit) == 2:
+        mins = int(minsplit[0]) if minsplit[0] else 1
+    elif len(minsplit) == 1:
+        mins = 0
+    if minsplit[-1] == '':
+        secs = 0
+    else:
+        secsplit = minsplit[-1].split('s')
+        secs = int(secsplit[0])
+    return pd.Timedelta(dt.timedelta(minutes=mins, seconds=secs))
