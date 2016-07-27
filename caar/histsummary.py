@@ -203,7 +203,7 @@ def count_of_data_points_for_each_id(df):
             .to_dict())
 
 
-def count_of_data_points_for_select_id(id, df):
+def count_of_data_points_for_select_id(df, id):
     """Returns number of observations for the specified thermostat or location
     within a DataFrame.
 
@@ -213,7 +213,7 @@ def count_of_data_points_for_select_id(id, df):
         df (pandas DataFrame): DataFrame as created by **history** module.
 
     Returns:
-        data_points_df (int): Number of observations for the given ID in the DataFrame.
+        data_points (int): Number of observations for the given ID in the DataFrame.
     """
     idx = pd.IndexSlice
     return df.loc[idx[id, :], :].count()
