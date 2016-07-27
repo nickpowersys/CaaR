@@ -24,6 +24,13 @@ This project is intended to accelerate analysis of timestamped data including th
 * pandas
 * click
 
+[![Anaconda-Server Badge](https://anaconda.org/nickpowersys/caar/badges/version.svg)](https://anaconda.org/nickpowersys/caar)
+
+
+[![Anaconda-Server Badge](https://anaconda.org/nickpowersys/caar/badges/installer/pypi.svg)](https://pypi.anaconda.org/nickpowersys)
+
+    pip install -i https://pypi.anaconda.org/nickpowersys/simple caar
+
 Documentation is at  http://caar.readthedocs.io/en/latest/
 
 Begin by reviewing the sample input files in the data directory at https://github.com/nickpowersys/CaaR, within the data folder.
@@ -43,3 +50,5 @@ I would welcome any feedback on features that would be useful. The project is a 
 ## License
 
 This project is licensed under the terms of the BSD 3-Clause License.
+
+[![Anaconda-Server Badge](https://anaconda.org/nickpowersys/caar/badges/license.svg)](https://anaconda.org/nickpowersys/caar)
