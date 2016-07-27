@@ -369,23 +369,3 @@ def count_inside_temps_in_intervals_for_thermo_id(df, id, interval='D'):
                            .resample(interval)
                            .count())
     return count_temps_per_day
-
-
-
-
-def dt_timedelta_from_frequency(freq):
-    """Returns a datetime.timedelta object based on the input arg freq, which is
-     a string.
-     """
-    freq_codes = ['H', 'min', 'T', 'S']
-    if freq[-1] in freq_codes:
-        freq_type = freq[-1]
-        num_units = freq[:len(freq) - 1] if len(freq) >= 2 else 1
-    elif freq[-3:] in freq_codes:
-        freq_type = freq[-3]
-        num_units = freq[:len(freq) - 3] if len(freq) >= 4 else 1
-    freq_timedelta_mapping = {'H': dt.timedelta(hours=num_units),
-                              'min': dt.timedelta(minutes=num_units),
-                              'T': dt.timedelta(minutes=num_units),
-                              'S': dt.timedelta(seconds=num_units)}
-    return dt.timedelta(freq_timedelta_mapping[freq_type])
