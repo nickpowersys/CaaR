@@ -150,3 +150,34 @@ def _timedelta_from_string(delta):
         secsplit = minsplit[-1].split('s')
         secs = int(secsplit[0])
     return pd.Timedelta(dt.timedelta(minutes=mins, seconds=secs))
+
+
+def plot_cycles_xy(cycles_and_temps):
+    """Returns x and y time series where x holds timestamps and y is a series of 1's and 0's to indicate ON/OFF status. The argument must be a return value from the function time_series_cycling_and_temps().
+
+    Args:
+        cycles_and_temps(tuple of NumPy arrays): The tuple should be from time_series_cycling_and_temps().
+
+    Returns:
+        cycles_x_and_y (tuple of NumPy arrays): The first tuple (which can be plotted on the x-axis) holds timestamps (datetime64).
+    """
+    cycles_x = cycles_and_temps[0]
+    cycles_y = np.array(cycles_and_temps[1][:,0])
+    return (cycles_x, cycles_y)
+
+
+def plot_temps_xy(cycles_and_temps):
+    """Returns x and y time series where x holds timestamps and y is a series of temperatures. The argument must be a return value from the function time_series_cycling_and_temps().
+
+    Args:
+        cycles_and_temps(tuple of NumPy arrays): The tuple should be from time_series_cycling_and_temps().
+
+    Returns:
+        cycles_x_and_y (tuple of NumPy arrays): The first tuple (which can be plotted on the x-axis) holds timestamps (datetime64). The second tuple (temperatures) holds only non-null observations
+    """
+    indoor = np.array(cycles_and_temps[1][:,1]).astype(np.float_)
+    indoor[indoor==0] = np.nan
+    indoormask = np.isfinite(indoor)
+    temps_x = cycles_and_temps[0][indoormask]
+    temps_y = indoor[indoormask]
+    return (temps_x, temps_y)
