@@ -23,6 +23,9 @@ This project is intended to accelerate analysis of timestamped data including th
 Installation and How to Start Using
 ===================================
 
+<a href="https://anaconda.org/nickpowersys/caar"> <img src="https://anaconda.org/nickpowersys/caar/badges/version.svg" /> </a>
+
+See pip installation at the top of the page. For maximum flexibility, the repository at Github can be git cloned, and the config.ini file may be edited as described above.
 
 **Dependencies:**
 
@@ -52,6 +55,8 @@ Contributors
 I would welcome any feedback on features that would be useful. The project is a work in progress.
 
 License
-==========
+======
 
 This project is licensed under the terms of the BSD 3-Clause License.
+
+<a href="https://anaconda.org/nickpowersys/caar"> <img src="https://anaconda.org/nickpowersys/caar/badges/license.svg" /> </a>
