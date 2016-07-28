@@ -129,6 +129,7 @@ def _raw_temp_arr_by_freq(df, id, start, end, freq='1min'):
     for i in range(len(records)):
         record_index = _index_of_timestamp(start, timestamps_by_freq[i], freq)
         temps[record_index]['temps'] = temps_by_minute[i]
+
     temps[temps==0.0] = np.nan
     return temps
 
@@ -177,7 +178,6 @@ def plot_temps_xy(cycles_and_temps):
         cycles_x_and_y (tuple of NumPy arrays): The first tuple (which can be plotted on the x-axis) holds timestamps (datetime64). Both tuples (the second has an array of temperatures) hold only non-null observations.
     """
     indoor = np.array(cycles_and_temps[1][:,1])
-    indoor[indoor==0] = np.nan
     indoormask = np.isfinite(indoor)
     temps_x = cycles_and_temps[0][indoormask]
     temps_y = indoor[indoormask]
