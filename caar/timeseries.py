@@ -9,7 +9,7 @@ from caar.histsummary import location_id_of_thermo
 def time_series_cycling_and_temps(thermo_id, start, end, thermostats_file,
                                   cycles_df, inside_df, outside_df=None,
                                   freq='1min'):
-    """Returns 2-tuple containing NumPy arrays for the specified thermostat as time series, with one record for each interval at the specified frequency ('freq'). For cycle data, ON status is given by 1's, and OFF status is given by 0's. For temperature data, intervals between the intervals with actual observations are filled with zeros.
+    """Returns 2-tuple containing NumPy arrays for the specified thermostat as time series, with one record for each interval at the specified frequency ('freq'). For cycle data, ON status is given by 1's, and OFF status is given by 0's. For temperature data, intervals between the intervals with actual observations are filled with numpy.nan.
 
     Args:
         thermo_id (int): Thermostat ID.
@@ -110,7 +110,7 @@ def _raw_temp_arr_by_freq(df, id, start, end, freq='1min'):
     dt_index = pd.DatetimeIndex(start=start, end=end, freq=freq)
     # Array to hold the timestamped temperatures.
     temps = np.zeros((len(dt_index),), dtype=[('times', 'datetime64[m]'),
-                                              ('temps', 'uint8')])
+                                              ('temps', 'float16')])
     temps['times'] = dt_index.to_pydatetime()  # independent var. x
     idx = pd.IndexSlice
     # Get timestamps and temperatures values from dataframe, according to the
@@ -129,6 +129,7 @@ def _raw_temp_arr_by_freq(df, id, start, end, freq='1min'):
     for i in range(len(records)):
         record_index = _index_of_timestamp(start, timestamps_by_freq[i], freq)
         temps[record_index]['temps'] = temps_by_minute[i]
+    temps[temps==0.0] = np.nan
     return temps
 
 
@@ -173,9 +174,9 @@ def plot_temps_xy(cycles_and_temps):
         cycles_and_temps(tuple of NumPy arrays): The tuple should be from time_series_cycling_and_temps().
 
     Returns:
-        cycles_x_and_y (tuple of NumPy arrays): The first tuple (which can be plotted on the x-axis) holds timestamps (datetime64). The second tuple (temperatures) holds only non-null observations
+        cycles_x_and_y (tuple of NumPy arrays): The first tuple (which can be plotted on the x-axis) holds timestamps (datetime64). Both tuples (the second has an array of temperatures) hold only non-null observations.
     """
-    indoor = np.array(cycles_and_temps[1][:,1]).astype(np.float_)
+    indoor = np.array(cycles_and_temps[1][:,1])
     indoor[indoor==0] = np.nan
     indoormask = np.isfinite(indoor)
     temps_x = cycles_and_temps[0][indoormask]
