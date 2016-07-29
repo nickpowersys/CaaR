@@ -37,6 +37,8 @@ This project is intended to accelerate analysis of timestamped data including th
 
 Documentation is at  http://caar.readthedocs.io/en/latest/
 
+Examples of usage in a notebook are shown at https://anaconda.org/nickpowersys/caarexamples/notebook
+
 Begin by reviewing the sample input files in the data directory at https://github.com/nickpowersys/CaaR, within the data folder.
 
 Functions in the **histsummary** and **timeseries** modules build on output from the first two modules, **cleanthermostat** and **history**.
