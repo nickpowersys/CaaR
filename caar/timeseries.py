@@ -35,12 +35,12 @@ def time_series_cycling_and_temps(thermo_id, start, end, thermostats_file,
 
     """
     cycles = on_off_status(cycles_df, thermo_id, start, end, freq=freq)
-    inside = _raw_temp_arr_by_freq(inside_df, thermo_id, start, end, freq=freq)
+    inside = temps_arr_by_freq(inside_df, thermo_id, start, end, freq=freq)
 
     if isinstance(outside_df, pd.DataFrame):
         location_id = location_id_of_thermo(thermo_id, thermostats_file)
-        outside = _raw_temp_arr_by_freq(outside_df, location_id, start, end,
-                                        freq=freq)
+        outside = temps_arr_by_freq(outside_df, location_id, start, end,
+                                    freq=freq)
         if (np.array_equal(cycles['times'], inside['times']) and
                 np.array_equal(cycles['times'], outside['times'])):
             cycles_temps = (cycles['times'],
@@ -103,9 +103,22 @@ def on_off_status(df, id, start, end, freq='1min'):
     return status_in_intervals
 
 
-def _raw_temp_arr_by_freq(df, id, start, end, freq='1min'):
-    """Return NumPy array containing timestamps ('times') and temperatures
-    at the specified frequency.
+def temps_arr_by_freq(df, id, start, end, freq='1min'):
+    """Returns NumPy array containing timestamps ('times') and temperatures at the specified frequency. Intervals without observations are filled with numpy.nan.
+
+    Args:
+        df (pandas DataFrame): DataFrame with temperatures from **history** module.
+
+        id (int): Thermostat ID.
+
+        start (datetime.datetime): First interval to include in output array.
+
+        end (datetime.datetime): Last interval to include in output array.
+
+        freq (str): Frequency of intervals in output, specified in format recognized by pandas.
+
+    Returns:
+        Structured NumPy array with two columns: 1) 'times' (datetime64[m]) and 2) 'temps' (numpy.float16).
     """
     dt_index = pd.DatetimeIndex(start=start, end=end, freq=freq)
     # Array to hold the timestamped temperatures.
