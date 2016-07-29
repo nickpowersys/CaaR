@@ -35,15 +35,15 @@ See pip installation at the top of the page. For maximum flexibility, the reposi
 * pandas
 * click
 
-Documentation is at  http://caar.readthedocs.io/en/latest/
+Documentation is at  <a href="http://caar.readthedocs.io/en/latest/">http://caar.readthedocs.io/en/latest/</a>
 
-Examples of usage in a notebook are shown at https://anaconda.org/nickpowersys/caarexamples/notebook
+Examples of usage in a notebook are shown at <a href="https://anaconda.org/nickpowersys/caarexamples/notebook">https://anaconda.org/nickpowersys/caarexamples/notebook</a>
 
-Begin by reviewing the sample input files in the data directory at https://github.com/nickpowersys/CaaR, within the data folder.
+Begin by reviewing the sample input files in the data directory at <a href="https://github.com/nickpowersys/CaaR">https://github.com/nickpowersys/CaaR</a>, within the data folder.
 
 Functions in the **histsummary** and **timeseries** modules build on output from the first two modules, **cleanthermostat** and **history**.
 
-**Cleanthermostat module**: In addition to using functions in the cleanthermostat module to create a dict or pickle file, it is also possible to run the script in picklert.py (seen at https://github.com/nickpowersys/CaaR/caar) from the command line in order to initiate the process of reading data files. Detailed instructions are given in the leading source code comments of picklert.py itself. A binary output file with a .pickle extension will be created.
+**Cleanthermostat module**: In addition to using functions in the cleanthermostat module to create a dict or pickle file, it is also possible to run the script in picklert.py (seen at <a href="https://github.com/nickpowersys/CaaR/caar">https://github.com/nickpowersys/CaaR/caar</a>) from the command line in order to initiate the process of reading data files. Detailed instructions are given in the leading source code comments of picklert.py itself. A binary output file with a .pickle extension will be created.
 
 **History module**: Once a pickle file or dict is created with the **cleanthermostat** module, the file name or dict can be used as an argument in order to easily create a pandas DataFrame using the DataFrame creation functions in the history module. The DataFrame will have a multi-field index or pandas MultiIndex (using IDs and time stamps).
 
