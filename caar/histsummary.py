@@ -159,7 +159,6 @@ def daily_data_points_by_id(df, id=None):
     daily_df = (df.groupby([df.index.get_level_values(level=0),
                             pd.TimeGrouper('D', level=1)])
                 .count())
-    daily_df.columns = ['Observations']
     return daily_df
 
 
