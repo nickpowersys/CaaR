@@ -105,7 +105,7 @@ def on_off_status(df, id, start, end, freq='1min'):
 
 
 def temps_arr_by_freq(df, id, start, end, freq='1min', actuals_only=False):
-    """Returns NumPy array containing timestamps ('times') and temperatures at the specified frequency. Intervals without observations are filled with numpy.nan.
+    """Returns NumPy array containing timestamps ('times') and temperatures at the specified frequency. If *actuals_only* is True, only the observed temperatures will be returned in an array. Otherwise, by default, intervals without observations are filled with zeros.
 
     Args:
         df (pandas DataFrame): DataFrame with temperatures from **history** module.
