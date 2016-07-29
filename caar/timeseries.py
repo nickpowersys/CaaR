@@ -196,7 +196,7 @@ def plot_temps_xy(cycles_and_temps):
         cycles_and_temps(tuple of NumPy arrays): The tuple should be from time_series_cycling_and_temps().
 
     Returns:
-        cycles_x_and_y (tuple of NumPy arrays): The first tuple (which can be plotted on the x-axis) holds timestamps (datetime64). Both tuples (the second has an array of temperatures) hold only non-null observations.
+        x, y (tuple of NumPy arrays): The first tuple (which can be plotted on the x-axis) holds timestamps (datetime64). Both tuples (the second has an array of temperatures) hold only non-null observations.
     """
     indoor = np.array(cycles_and_temps[1][:, 1])
     masked_temps = np.ma.masked_values(indoor, 0.0)
