@@ -118,7 +118,7 @@ def temps_arr_by_freq(df, id, start, end, freq='1min'):
         freq (str): Frequency of intervals in output, specified in format recognized by pandas.
 
     Returns:
-        Structured NumPy array with two columns: 1) 'times' (datetime64[m]) and 2) 'temps' (numpy.float16).
+        temps_arr (structured NumPy array with two columns): 1) 'times' (datetime64[m]) and 2) 'temps' (numpy.float16).
     """
     dt_index = pd.DatetimeIndex(start=start, end=end, freq=freq)
     # Array to hold the timestamped temperatures.
