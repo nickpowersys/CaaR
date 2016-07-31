@@ -205,4 +205,3 @@ def plot_temps_xy(cycles_and_temps):
                                      mask=np.ma.getmask(masked_temps))
     x, y = masked_times.compressed(), masked_temps.compressed()
     return x, y
-
