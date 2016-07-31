@@ -35,21 +35,17 @@ This project is intended to accelerate analysis of timestamped data including th
 
     pip install -i https://pypi.anaconda.org/nickpowersys/simple caar
 
-Documentation is at  http://caar.readthedocs.io/en/latest/
+Documentation is at http://caar.readthedocs.io/en/latest/
 
-Examples of usage in a notebook are shown at https://anaconda.org/nickpowersys/caarexamples/notebook
+Examples of usage in a notebook are at https://anaconda.org/nickpowersys/caarexamples/notebook
 
 Begin by reviewing the sample input files in the data directory at https://github.com/nickpowersys/CaaR, within the data folder.
 
-Functions in the **histsummary** and **timeseries** modules build on output from the first two modules, **cleanthermostat** and **history**.
+The overall sequence of operations when working with CaaR can be streamlined by using CaaR to read raw text data only once and save the structured output as Python pickle files.
 
-**Cleanthermostat module**: In addition to using functions in the cleanthermostat module to create a dict or pickle file, it is also possible to run the script in picklert.py (seen in the caar folder) from the command line in order to create a pickle file based on a delimited text file. Instructions are given in the source code comments of picklert.py itself. A binary output file with a .pickle extension will be created.
+Next, CaaR's DataFrame creation functions can create pandas DataFrames.
 
-**History module**: Once a pickle file or dict is created with the **cleanthermostat** module, the file name or dict can be used as an argument in order to easily create a pandas DataFrame using the DataFrame creation functions in the history module. The DataFrame will have a multi-field index, or pandas MultiIndex (using IDs and time stamps).
-
-**Histsummary module**: This module can be used to summarize observations across thermostats or locations, as well as summarize observations for individual devices. This module uses the pandas DataFrames created by the **history** module.
-
-**Timeseries module**: The functions in this module convert the observations from the **history** module into time series in NumPy arrays, for plotting/visualization and deeper data analysis.
+In addition to offering many functions for summarizing and analyzing the data with CaaR and built-in pandas functions, DataFrames can be converted by CaaR into NumPy time series arrays, for plotting/visualization and deeper data analysis.
 
 ## Contributors
 
