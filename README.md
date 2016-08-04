@@ -28,9 +28,9 @@ This project is intended to accelerate analysis of timestamped data including th
 * pandas
 * click
 
-[![Anaconda-Server Badge](https://anaconda.org/nickpowersys/caar/badges/installer/pypi.svg)](https://pypi.anaconda.org/nickpowersys)
+Installation:
 
-    pip install -i https://pypi.anaconda.org/nickpowersys/simple caar
+    pip install caar
 
 Documentation is at http://caar.readthedocs.io/en/latest/
 
