@@ -1,3 +1,6 @@
+from __future__ import absolute_import, division, print_function
+from future.builtins import (dict, int, open)
+
 import datetime as dt
 import os.path
 import numpy as np
@@ -7,8 +10,8 @@ import pytest
 
 from caar import cleanthermostat as ct
 from caar import history as hi
-from caar import histdaily as hd
 from caar import histsummary as hs
+from caar import timeseries as ts
 
 from caar.configparser_read import TEST_CYCLES_FILE, CYCLES_PICKLE_FILE_OUT,    \
     CYCLES_PICKLE_FILE, THERMO_IDS, INSIDE_PICKLE_FILE_OUT, INSIDE_PICKLE_FILE, \
@@ -65,7 +68,7 @@ def state_fixture():
     return [STATE]
 
 
-@slow
+
 @pytest.mark.parametrize("data_file, states, thermostats, postal, cycle",
                          [(TEST_CYCLES_FILE, STATE, TEST_THERMOSTATS_FILE,
                            TEST_POSTAL_FILE, CYCLE_TYPE_COOL),
@@ -88,7 +91,7 @@ def test_select_clean(data_file, states, thermostats, postal, cycle):
         assert len(clean_dict) > 0
 
 
-@slow
+
 @pytest.mark.parametrize("data_file, states_to_clean, expected_path, thermostats, postal",
                          [(TEST_CYCLES_FILE, STATE, CYCLES_PICKLE_FILE_OUT,
                            TEST_THERMOSTATS_FILE, TEST_POSTAL_FILE),
@@ -130,7 +133,7 @@ def test_df_creation(pickle_file, df_creation_func, id_type, ids):
     assert isinstance(df, pd.DataFrame)
 
 
-@slow
+
 @pytest.mark.parametrize("df_fixture, id, start, end, freq",
                          [(cycle_df_fixture(), THERMO_ID1, dt.datetime(2012, 6, 18, 21, 0, 0),
                            dt.datetime(2012, 6, 18, 23, 0, 0), '1min30s'),
@@ -142,11 +145,11 @@ def test_df_creation(pickle_file, df_creation_func, id_type, ids):
                            dt.datetime(2012, 6, 18, 23, 0, 0), 'min')])
 def test_on_off_status_by_interval(df_fixture, id, start, end, freq):
     kwargs = {'freq': freq}
-    on_off = hd.on_off_status(df_fixture, id, start, end, **kwargs)
+    on_off = ts.on_off_status(df_fixture, id, start, end, **kwargs)
     assert len(on_off['times']) > 0
 
 
-@slow
+
 @pytest.mark.parametrize("df_fixture, id, start, end, freq",
                          [(inside_df_fixture(), THERMO_ID1, dt.datetime(2012, 6, 18, 21, 0, 0),
                            dt.datetime(2012, 6, 18, 23, 0, 0), '1min30s'),
@@ -166,11 +169,11 @@ def test_on_off_status_by_interval(df_fixture, id, start, end, freq):
                            dt.datetime(2012, 6, 18, 23, 0, 0), 'min')])
 def test_temps_by_interval(df_fixture, id, start, end, freq):
     kwargs = {'freq': freq}
-    temps = hd._raw_temp_arr_by_freq(df_fixture, id, start, end, **kwargs)
+    temps = ts.temps_arr_by_freq(df_fixture, id, start, end, **kwargs)
     assert len(temps['times']) > 0
 
 
-@slow
+
 @pytest.mark.parametrize("thermo_id, start, end, freq, cycle_df, inside_df, outside_df, thermo_file",
                          [(THERMO_ID1, dt.datetime(2012, 6, 18, 21, 0, 0),
                            dt.datetime(2012, 6, 19, 20, 59, 0), '1min',
@@ -178,8 +181,11 @@ def test_temps_by_interval(df_fixture, id, start, end, freq):
                            outside_df_fixture(), TEST_THERMOSTATS_FILE)])
 def test_single_day_cycling_and_temps(thermo_id, start, end, freq, cycle_df,
                                       inside_df, outside_df, thermo_file):
-    single_day_arr = hd.time_series_cycling_and_temps(thermo_id, start, end, freq, cycle_df,
-                                                      inside_df, outside_df, thermo_file)
+    single_day_arr = ts.time_series_cycling_and_temps(thermo_id, start, end,
+                                                      thermo_file, cycle_df,
+                                                      inside_df,
+                                                      outside_df=outside_df,
+                                                      freq=freq)
     assert isinstance(single_day_arr[0], np.ndarray)
     assert isinstance(single_day_arr[1], np.ndarray)
     assert single_day_arr[1].shape[1] == 3
@@ -191,10 +197,10 @@ def test_single_day_cycling_and_temps(thermo_id, start, end, freq, cycle_df,
                           (inside_df_fixture(), THERMO_ID1, 1)])
 def test_min_and_max_indoor_temp_by_id(df, id, minimum_records):
     if id is None:
-        min_max_df = hd.min_and_max_indoor_temp_by_id(df)
+        min_max_df = ts.min_and_max_indoor_temp_by_id(df)
         assert len(min_max_df.index) >= minimum_records
     elif id is not None:
-        min_max_df = hd.min_and_max_indoor_temp_by_id(df, id=id)
+        min_max_df = ts.min_and_max_indoor_temp_by_id(df, id=id)
         assert np.int64(id) in list(min_max_df.index)
         assert len(min_max_df.index) == minimum_records
 
@@ -205,11 +211,11 @@ def test_min_and_max_indoor_temp_by_id(df, id, minimum_records):
                           (outside_df_fixture(), LOCATION_ID1, 1)])
 def test_min_and_max_outdoor_temp_by_id(df, id, minimum_records):
     if id is None:
-        min_max_df = hd.min_and_max_outdoor_temp_by_id(df)
+        min_max_df = ts.min_and_max_outdoor_temp_by_id(df)
     elif id is not None:
-        min_max_df = hd.min_and_max_outdoor_temp_by_id(df, id=id)
+        min_max_df = ts.min_and_max_outdoor_temp_by_id(df, id=id)
         for thermo_id in list(min_max_df.index):
-            assert hd.location_id_of_thermo(thermo_id) == id
+            assert ts.location_id_of_thermo(thermo_id) == id
     assert len(min_max_df.index) >= minimum_records
 
 
@@ -220,7 +226,7 @@ def test_min_and_max_outdoor_temp_by_id(df, id, minimum_records):
                           ('2min', pd.Timedelta(dt.timedelta(seconds=120))),
                           ('min', pd.Timedelta(dt.timedelta(seconds=60)))])
 def test_timedelta_from_string(min_s_string, pd_timedelta):
-    assert hd._timedelta_from_string(min_s_string) == pd_timedelta
+    assert ts._timedelta_from_string(min_s_string) == pd_timedelta
 
 
 @slow

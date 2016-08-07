@@ -1,3 +1,6 @@
+from __future__ import absolute_import, division, print_function
+from future.builtins import (input)
+
 import click
 import caar.cleanthermostat as ct
 from caar.configparser_read import THERMOSTATS_FILE, POSTAL_FILE

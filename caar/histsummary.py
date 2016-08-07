@@ -1,3 +1,6 @@
+from __future__ import absolute_import, division, print_function
+from future.builtins import (int)
+
 import datetime as dt
 
 import numpy as np
@@ -286,7 +289,6 @@ def last_full_day_of_inside_temperature_data(df):
 def first_and_last_days_cycling(df):
     return (first_full_day_of_inside_temperature_data(df),
             last_full_day_of_inside_temperature_data(df))
-
 
 
 def number_of_days(df):

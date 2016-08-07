@@ -1,5 +1,9 @@
+from __future__ import absolute_import, division, print_function
+from future.builtins import (int, open, str)
+
 import os.path
 import pickle
+import sys
 from collections import namedtuple
 
 import pandas as pd
@@ -155,7 +159,11 @@ def _pickle_filename(text_file, states_to_clean):
         states = states_to_clean.split(',')
     else:
         states = ['all_states']
-    filename = '_'.join(states + [data_type]) + '.pickle'
+    if '2.7' in sys.version:
+        py_version = 'py27'
+        filename = '_'.join(states + [data_type, py_version]) + '.pickle'
+    else:
+        filename = '_'.join(states + [data_type]) + '.pickle'
     return filename
 
 

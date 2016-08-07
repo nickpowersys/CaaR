@@ -1,3 +1,6 @@
+from __future__ import absolute_import, division, print_function
+from future.builtins import (dict, int, open, str)
+
 import datetime as dt
 import pickle
 import random
@@ -87,6 +90,7 @@ def _records_as_lists_of_tuples(dict_or_pickle_file, id_field, time_field,
     2) a list of either indoor (or outdoor) temperatures, or the ending time
     of a cycle, based on input of a pickle file containing a dict.
     """
+    records = {}
     if isinstance(dict_or_pickle_file, dict):
         records = dict_or_pickle_file
     else:
@@ -95,7 +99,6 @@ def _records_as_lists_of_tuples(dict_or_pickle_file, id_field, time_field,
                 records = pickle.load(cp)
         except ValueError:
             print('The first argument must be a pickle file or dict.')
-
     random_record = random_record_from_dict(records, value_only=True)
     data_type = _determine_if_temperature_or_time_data(random_record)
     if ids is not None:
@@ -118,11 +121,20 @@ def _records_as_lists_of_tuples(dict_or_pickle_file, id_field, time_field,
 def random_record_from_dict(records, value_only=False):
     """Returns a randomly chosen key-value pair from a dict."""
     copied_keys = list(records.keys())
-    random_record_key = random.choice(copied_keys)
+    random_record_key = _random_record_key(copied_keys)
     if value_only:
         return records[random_record_key]
     else:
         return (random_record_key, records[random_record_key])
+
+
+def _random_record_key(keys):
+    try:
+        random_record_key = random.choice(keys)
+    except IndexError:
+        print('No records in the dict or pickle file.')
+    else:
+        return random_record_key
 
 
 def _determine_if_temperature_or_time_data(record_data):
