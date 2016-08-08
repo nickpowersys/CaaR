@@ -20,7 +20,7 @@ from sphinx.apidoc import main
 
 import unittest.mock
  
-MOCK_MODULES = ['scipy', 'numpy', 'future', 'backports', 'backports.configparser', 'py', 'pytest', 'click', 'pandas', 'scipy.interpolate', 'scipy.ndimage.interpolation']
+MOCK_MODULES = ['numpy', 'future', 'py', 'pytest', 'click', 'pandas']
 for mod_name in MOCK_MODULES:
     sys.modules[mod_name] = unittest.mock.Mock()
 
