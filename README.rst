@@ -1,5 +1,5 @@
 CaaR - Cooling as a Resource
-=======================
+============================
 
 The primary objective of this project is to convert recorded observations about thermostat ON/OFF cycles in cooling or heating modes into indexed time series (in pandas and NumPy).
 
@@ -23,21 +23,47 @@ This project is intended to accelerate analysis of timestamped data including th
 Installation and How to Start Using
 ===================================
 
-See pip installation at the top of the page. For maximum flexibility, the repository at Github can be git cloned, and the config.ini file may be edited as described above.
+For maximum flexibility, the repository at Github (see link below) can be git cloned, and the config.ini file may be edited as described above. To get a quick understanding, see the link below for the sample data files. Config.ini is within the *caar* folder.
+
+    :code:`git clone https://github.com/nickpowersys/CaaR.git`
+
+Otherwise, the package may be installed using *pip* or *conda*.
+
+**Python versions supported:**
+
+* 2.7
+* 3.4
+* 3.5
 
 **Dependencies:**
 
-* Python 3.4+
-* NumPy
-* SciPy
 * pandas
+* NumPy
+* future
 * click
 
-Documentation is at  <a href="http://caar.readthedocs.io/en/latest/">http://caar.readthedocs.io/en/latest/</a>
+Assuming no version is specified, the latest version of *caar* will be installed.
 
-Examples of usage in a notebook are at <a href="https://anaconda.org/nickpowersys/caarexamples/notebook">https://anaconda.org/nickpowersys/caarexamples/notebook</a>
+**Conda installation**
 
-Begin by reviewing the sample input files in the data directory at <a href="https://github.com/nickpowersys/CaaR">https://github.com/nickpowersys/CaaR</a>, within the data folder.
+    :code:`conda install -c nickpowersys caar`
+
+**Pip installation from PyPI**
+
+    :code:`pip install caar`
+
+Examples and Documentation
+==========================
+
+Begin by reviewing the sample input files in the data directory at <a href="https://github.com/nickpowersys/CaaR">https://github.com/nickpowersys/CaaR</a>, within the data folder. As noted above, the format of input files can be specified within the config.ini file after git cloning the Github repository.
+
+**Example Notebook**
+
+<a href="https://anaconda.org/nickpowersys/caarexamples/notebook">https://anaconda.org/nickpowersys/caarexamples/notebook</a>
+
+**API Documentation**
+
+<a href="http://caar.readthedocs.io/en/latest/">http://caar.readthedocs.io/en/latest/</a>
 
 The overall sequence of operations when working with CaaR can be streamlined by using CaaR to read raw text data only once and save the structured output as Python pickle files.
 
@@ -51,7 +77,7 @@ Contributors
 I would welcome any feedback on features that would be useful. The project is a work in progress.
 
 License
-======
+=======
 
 This project is licensed under the terms of the BSD 3-Clause License.
 

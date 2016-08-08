@@ -3,7 +3,7 @@ from setuptools import find_packages, setup
 
 setup(
     name='caar',
-    version='0.0.6',
+    version='0.0.9',
     url='http://github.com/nickpowersys/CaaR/',
     license='BSD 3-Clause License',
     author='Nicholas A. Brown',
@@ -12,7 +12,7 @@ setup(
                 'thermostat-driven loads.',
     # install_requires=['numpy>=1.11.1',
     #  'pandas>=0.18.1',
-    #  'scipy>=0.17.1',
+    #  'future',
     #  'click>=6.6',
     #  ],
     packages=find_packages(),
@@ -23,6 +23,7 @@ setup(
     include_package_data=True,
     platforms='any',
     classifiers=[
+        'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
         'Development Status :: 4 - Beta',

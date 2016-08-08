@@ -1,9 +1,10 @@
 from __future__ import absolute_import, division, print_function
-from future.builtins import (int)
-
-from configparser import ConfigParser
+from backports.configparser import ConfigParser
 import os.path
 import sys
+
+from future import standard_library
+standard_library.install_aliases()
 
 parser = ConfigParser()
 

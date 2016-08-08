@@ -20,21 +20,41 @@ This project is intended to accelerate analysis of timestamped data including th
 
 ## Installation and How to Start Using
 
+For maximum flexibility, the repository at Github (see link below) can be git cloned, and the config.ini file may be edited as described above. To get a quick understanding, see the link below for the sample data files. Config.ini is within the _caar_ folder.
+
+    git clone https://github.com/nickpowersys/CaaR.git
+
+Otherwise, the package may be installed using *pip* or *conda*.
+
+### Python versions supported
+* 2.7
+* 3.4
+* 3.5
+
 ### Dependencies
 
-* Python 3.4+
-* NumPy
-* SciPy
 * pandas
+* NumPy
+* future
 * click
 
-Installation:
+Assuming no version is specified, the latest version of *caar* will be installed.
+
+### Pip installation
 
     pip install caar
 
-Documentation is at http://caar.readthedocs.io/en/latest/
+### Conda installation from Anaconda Cloud (Anaconda.org):
 
-Examples of usage in a notebook are at https://anaconda.org/nickpowersys/caarexamples/notebook
+    conda install -c nickpowersys caar
+
+### API documentation
+
+http://caar.readthedocs.io/en/latest/
+
+### Example Notebook 
+
+https://anaconda.org/nickpowersys/caarexamples/notebook
 
 Begin by reviewing the sample input files in the data directory at https://github.com/nickpowersys/CaaR, within the data folder.
 

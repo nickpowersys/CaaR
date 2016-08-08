@@ -1,9 +1,10 @@
 from __future__ import absolute_import, division, print_function
-from future.builtins import (input)
-
 import click
 import caar.cleanthermostat as ct
 from caar.configparser_read import THERMOSTATS_FILE, POSTAL_FILE
+
+from future import standard_library
+standard_library.install_aliases()
 
 
 """This script file creates a Python pickle file from a raw data file that

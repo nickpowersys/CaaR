@@ -1,13 +1,9 @@
 from __future__ import absolute_import, division, print_function
-from future.builtins import (int, open, str)
-
 import os.path
 import pickle
 import sys
 from collections import namedtuple
-
 import pandas as pd
-
 from caar.configparser_read import UNIQUE_CYCLE_FIELD_INDEX,             \
     UNIQUE_OUTSIDE_FIELD, INSIDE_FIELDS, CYCLE_FIELDS, OUTSIDE_FIELDS,   \
     THERMOSTAT_LOCATION_ID, THERMOSTAT_ZIP_CODE, POSTAL_FILE_ZIP,        \
@@ -15,6 +11,9 @@ from caar.configparser_read import UNIQUE_CYCLE_FIELD_INDEX,             \
     CYCLE_VALUES_START, THERMO_ID_FIELD, INSIDE_LOG_DATE_INDEX,          \
     OUTSIDE_LOG_DATE_INDEX, INSIDE_DEGREES_INDEX, OUTSIDE_DEGREES_INDEX, \
     CYCLE_TYPE_COOL
+
+from future import standard_library
+standard_library.install_aliases()
 
 
 Cycle = namedtuple('Cycle', ['thermo_id', 'cycle_mode', 'start_time'])

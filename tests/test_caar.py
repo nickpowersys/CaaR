@@ -1,18 +1,14 @@
 from __future__ import absolute_import, division, print_function
-from future.builtins import (dict, int, open)
-
 import datetime as dt
 import os.path
 import numpy as np
 import pandas as pd
 import py
 import pytest
-
 from caar import cleanthermostat as ct
 from caar import history as hi
 from caar import histsummary as hs
 from caar import timeseries as ts
-
 from caar.configparser_read import TEST_CYCLES_FILE, CYCLES_PICKLE_FILE_OUT,    \
     CYCLES_PICKLE_FILE, THERMO_IDS, INSIDE_PICKLE_FILE_OUT, INSIDE_PICKLE_FILE, \
     OUTSIDE_PICKLE_FILE_OUT, OUTSIDE_PICKLE_FILE, LOCATION_IDS,     \
@@ -20,6 +16,10 @@ from caar.configparser_read import TEST_CYCLES_FILE, CYCLES_PICKLE_FILE_OUT,    
     TEST_INSIDE_FILE, TEST_OUTSIDE_FILE, ALL_STATES_CYCLES_PICKLED_OUT, \
     ALL_STATES_INSIDE_PICKLED_OUT, ALL_STATES_OUTSIDE_PICKLED_OUT, THERMO_ID1, \
     LOCATION_ID1
+
+from future import standard_library
+standard_library.install_aliases()
+
 
 slow = pytest.mark.skipif(
     not pytest.config.getoption("--runslow"),
@@ -68,7 +68,6 @@ def state_fixture():
     return [STATE]
 
 
-
 @pytest.mark.parametrize("data_file, states, thermostats, postal, cycle",
                          [(TEST_CYCLES_FILE, STATE, TEST_THERMOSTATS_FILE,
                            TEST_POSTAL_FILE, CYCLE_TYPE_COOL),
@@ -91,7 +90,6 @@ def test_select_clean(data_file, states, thermostats, postal, cycle):
         assert len(clean_dict) > 0
 
 
-
 @pytest.mark.parametrize("data_file, states_to_clean, expected_path, thermostats, postal",
                          [(TEST_CYCLES_FILE, STATE, CYCLES_PICKLE_FILE_OUT,
                            TEST_THERMOSTATS_FILE, TEST_POSTAL_FILE),
@@ -106,13 +104,12 @@ def test_select_clean(data_file, states, thermostats, postal, cycle):
                           (TEST_OUTSIDE_FILE, None, ALL_STATES_OUTSIDE_PICKLED_OUT,
                            None, None)])
 def test_pickle_cycles_inside_outside(tmpdir, data_file, states_to_clean, expected_path,
-                              thermostats, postal):
+                                      thermostats, postal):
     filename = tmpdir.join(ct._pickle_filename(data_file, states_to_clean))
     pickle_path = ct.pickle_from_file(data_file, picklepath=filename, states=states_to_clean,
                                       thermostats_file=thermostats, postal_file=postal)
     pickle_file = os.path.basename(pickle_path)
     assert pickle_file == os.path.basename(expected_path)
-
 
 
 @pytest.mark.parametrize("pickle_file, df_creation_func, id_type, ids",
@@ -133,7 +130,6 @@ def test_df_creation(pickle_file, df_creation_func, id_type, ids):
     assert isinstance(df, pd.DataFrame)
 
 
-
 @pytest.mark.parametrize("df_fixture, id, start, end, freq",
                          [(cycle_df_fixture(), THERMO_ID1, dt.datetime(2012, 6, 18, 21, 0, 0),
                            dt.datetime(2012, 6, 18, 23, 0, 0), '1min30s'),
@@ -147,7 +143,6 @@ def test_on_off_status_by_interval(df_fixture, id, start, end, freq):
     kwargs = {'freq': freq}
     on_off = ts.on_off_status(df_fixture, id, start, end, **kwargs)
     assert len(on_off['times']) > 0
-
 
 
 @pytest.mark.parametrize("df_fixture, id, start, end, freq",
@@ -171,7 +166,6 @@ def test_temps_by_interval(df_fixture, id, start, end, freq):
     kwargs = {'freq': freq}
     temps = ts.temps_arr_by_freq(df_fixture, id, start, end, **kwargs)
     assert len(temps['times']) > 0
-
 
 
 @pytest.mark.parametrize("thermo_id, start, end, freq, cycle_df, inside_df, outside_df, thermo_file",
@@ -267,6 +261,7 @@ def test_date_interval_stamps():
     assert ct.interval_stamps(first_day, last_day, number_of_days,
                               intervals_per_day).size == 2*24*60
 
+
 @slow
 def test_date_range_for_data(cycle_df_fixture):
     first_day = ct.start_of_first_full_day_df(cycle_df_fixture)
@@ -280,11 +275,13 @@ def test_thermostat_locations_df(thermostats_fixture, postal_fixture):
     df = ct._thermostats_states(thermostats_fixture, postal_fixture)
     assert isinstance(df, pd.DataFrame)
 
+
 @slow
 def test_intervals_since_epoch():
     now_fixture = dt.datetime(2011, 1, 1, 1, 1)
     assert ct.intervals_since_epoch(now_fixture, frequency='D') == 14975
     assert ct.intervals_since_epoch(now_fixture) == 14975*24*60
+
 
 @slow
 def test_thermostats_from_state(thermostats_fixture, postal_fixture, state_fixture):

@@ -1,12 +1,11 @@
 from __future__ import absolute_import, division, print_function
-from future.builtins import (int, range)
-
 import datetime as dt
-
 import numpy as np
 import pandas as pd
-
 from caar.histsummary import location_id_of_thermo
+
+from future import standard_library
+standard_library.install_aliases()
 
 
 def time_series_cycling_and_temps(thermo_id, start, end, thermostats_file,

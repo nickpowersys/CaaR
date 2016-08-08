@@ -1,15 +1,13 @@
 from __future__ import absolute_import, division, print_function
-from future.builtins import (int)
-
 import datetime as dt
-
 import numpy as np
 import pandas as pd
-
-
 from caar.configparser_read import OUTSIDE_TIMESTAMP_LABEL,               \
     CYCLE_START_TIME, CYCLE_END_TIME, THERMO_ID_FIELD, INSIDE_TEMP_FIELD, \
     THERMOSTAT_DEVICE_ID, THERMOSTAT_LOCATION_ID
+
+from future import standard_library
+standard_library.install_aliases()
 
 
 def days_of_data_by_id(df):
@@ -234,8 +232,8 @@ def location_id_of_thermo(thermo_id, thermostats_file):
         location_id (int): Location ID.
     """
     thermostat_df = pd.read_csv(thermostats_file,
-                                usecols=[THERMOSTAT_DEVICE_ID,
-                                         THERMOSTAT_LOCATION_ID],
+                                usecols=[str(THERMOSTAT_DEVICE_ID),
+                                         str(THERMOSTAT_LOCATION_ID)],
                                 index_col=0)
     idx = pd.IndexSlice
     return thermostat_df.loc[idx[thermo_id, THERMOSTAT_LOCATION_ID]]
