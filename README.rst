@@ -1,7 +1,7 @@
 CaaR - Cooling as a Resource
 ============================
 
-The primary objective of this project is to convert recorded observations about thermostat ON/OFF cycles in cooling or heating modes into indexed time series (in pandas and NumPy).
+The objective of this project is to convert recorded observations about thermostat ON/OFF cycles in cooling or heating modes into indexed time series in pandas and NumPy.
 
 The primary data is expected to be from these main sources (but is not limited to them):
 
@@ -18,7 +18,8 @@ Note the need for metadata files for both thermostats and zip codes. Example fil
 Motivation
 ==========
 
-This project is intended to accelerate analysis of timestamped data including thermostat operations at the device level and temperature data (indoor or outdoor) by putting them in an indexed form that is suitable for analysis in aggregated form and at the device level. It contains higher-level functions that support analysis of the data in various domains, further summarizing and helping to visualize the observations from a time series perspective easily. The ultimate intent is to support further analysis, either through forward or inverse modeling related to HVAC control, power systems or energy efficiency research.
+This project is intended to accelerate analysis of time-stamped data including thermostat operations at the device level and temperature data (indoor or outdoor). It does this by putting  observations into an indexed form that can be summarized in aggregated form and at the device level. It supports visualization in time series form. The ultimate intent is to support analysis related to HVAC control, power systems or energy efficiency research.
+
 
 Installation and How to Start Using
 ===================================
@@ -44,32 +45,37 @@ Otherwise, the package may be installed using *pip* or *conda*.
 
 Assuming no version is specified, the latest version of *caar* will be installed.
 
-**Conda installation**
-
-    :code:`conda install -c nickpowersys caar`
-
 **Pip installation from PyPI**
 
     :code:`pip install caar`
 
+**Conda installation from Anaconda.org**
+
+    :code:`conda install -c nickpowersys caar`
+
 Examples and Documentation
 ==========================
 
-Begin by reviewing the sample input files in the data directory at <a href="https://github.com/nickpowersys/CaaR">https://github.com/nickpowersys/CaaR</a>, within the data folder. As noted above, the format of input files can be specified within the config.ini file after git cloning the Github repository.
+Begin by reviewing the sample input files in the data directory at https://github.com/nickpowersys/CaaR, within the data folder. As noted above, the format of input files can be specified within the config.ini file after git cloning the Github repository.
 
 **Example Notebook**
 
-<a href="https://anaconda.org/nickpowersys/caarexamples/notebook">https://anaconda.org/nickpowersys/caarexamples/notebook</a>
+https://anaconda.org/nickpowersys/caarexamples/notebook
 
 **API Documentation**
 
-<a href="http://caar.readthedocs.io/en/latest/">http://caar.readthedocs.io/en/latest/</a>
+http://caar.readthedocs.io/en/latest/
 
-The overall sequence of operations when working with CaaR can be streamlined by using CaaR to read raw text data only once and save the structured output as Python pickle files.
+Overview
+========
 
-Next, CaaR's DataFrame creation functions can create pandas DataFrames.
+Sample input files are in the data directory at https://github.com/nickpowersys/CaaR.
 
-In addition to offering many functions for summarizing and analyzing the data with CaaR and built-in pandas functions, DataFrames can be converted by CaaR into NumPy time series arrays, for plotting/visualization and deeper data analysis.
+CaaR can be used to **read delimited text files** and (optionally) save the data in Python pickle files for fast access.
+
+Next, CaaR can **create pandas DataFrames**. CaaR and the pandas library offer many functions for summarizing and analyzing the data.
+
+CaaR can **convert DataFrames into NumPy time series arrays**, for plotting/visualization and deeper data analysis.
 
 Contributors
 ============
