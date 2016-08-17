@@ -3,7 +3,7 @@ from setuptools import find_packages, setup
 
 setup(
     name='caar',
-    version='0.0.11',
+    version='1.0.0-beta',
     url='http://github.com/nickpowersys/CaaR/',
     license='BSD 3-Clause License',
     author='Nicholas A. Brown',
@@ -23,13 +23,17 @@ setup(
     include_package_data=True,
     platforms='any',
     classifiers=[
+        'Development Status :: 4 - Beta',
+        'Intended Audience :: Science/Research',
+        'License :: OSI Approved :: BSD License',
+        'Natural Language :: English',
+        'Operating System :: MacOS :: MacOS X',
+        'Operating System :: Microsoft :: Windows :: Windows 7',
+        'Operating System :: POSIX :: Linux',
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
-        'Development Status :: 4 - Beta',
-        'Natural Language :: English',
-        'License :: OSI Approved :: BSD 3-Clause License',
-        'Operating System :: OS Independent',
+        'Topic :: Scientific/Engineering :: Information Analysis',
         'Topic :: Software Development :: Libraries :: Python Modules',
         ],
     extras_require={
