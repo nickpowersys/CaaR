@@ -292,7 +292,7 @@ def _validate_cycle_add_to_dict_auto(lines, header_len, delimiter, cols,
     for line in lines:
         if _line_contains_digits(line):
             record = _parse_line(line, delimiter, quote=quote)
-            if len(record) != header_len:
+            if len(record) != header_len or not all(record):
                 continue
         else:
             continue
@@ -379,7 +379,7 @@ def _validate_inside_add_to_dict_auto(lines, header_len, delimiter, cols,
     for line in lines:
         if _line_contains_digits(line):
             record = _parse_line(line, delimiter, quote=quote)
-            if len(record) != header_len:
+            if len(record) != header_len or not all(record):
                 continue
         else:
             continue
@@ -464,7 +464,7 @@ def _validate_outside_add_to_dict_auto(lines, header_len, delimiter, cols,
     for line in lines:
         if _line_contains_digits(line):
             record = _parse_line(line, delimiter, quote=quote)
-            if len(record) != header_len:
+            if len(record) != header_len or not all(record):
                 continue
         else:
             continue
