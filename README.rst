@@ -54,8 +54,6 @@ Assuming no version is specified, the latest version of *caar* will be installed
 Examples and Documentation
 ==========================
 
-Begin by reviewing the sample input files in the data directory at https://github.com/nickpowersys/CaaR, within the data folder. As noted above, the format of input files can be specified within the config.ini file after git cloning the Github repository.
-
 **Example Notebook**
 
 https://anaconda.org/nickpowersys/caarexamples/notebook

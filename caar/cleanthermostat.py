@@ -31,27 +31,28 @@ def dict_from_file(raw_file, cycle=None, states=None,
     """Read delimited text file and create dict of records. The keys are named
     2-tuples containing numeric IDs and time stamps.
 
-    The raw file must have a header and the first column on the left must
-    be a numeric ID.
+    See the example .csv data files at https://github.com/nickpowersys/caar
+
+    Example thermostat cycle file column headings: ThermostatId, CycleType, StartTime, EndTime.
+
+    Example inside temperature file column headings: ThermostatId, TimeStamp, Degrees.
+
+    Example outside temperature file column headings LocationId, TimeStamp, Degrees.
 
     The output can be filtered on records from a state or set of states by
     specifying a comma-delimited string containing state abbreviations.
     Otherwise, all available records will be in the output.
 
-    If a state or states are specified, a thermostats file and postal
-    code file must be in the arguments.
+    If a state or states are specified, a thermostats metadata file and postal
+    code file must be specified in the arguments and have the same ID columns
+    and ZipCode/PostalCode column headings in the same left-to-right order as in the examples.
 
-    See the example .csv data files at https://github.com/nickpowersys/caar
-
-    Thermostat cycle files should have these headings and corresponding row
-    values: "ThermostatId", "CycleType", "StartTime", "EndTime", and three
-    additional columns (dummy headings and values may be used).
-
-    Inside temperature files should have these headings and corresponding row
-    values: "ThermostatId", "LogDate", "Degrees".
-
-    Outside temperature files should have these headings and corresponding row
-    values: "LocationId", "LogDate", "Degrees".
+    In each file, the thermostat or location ID's should contain both letters and
+    digits in some combination  (leading zeroes are also allowed in place of letters).
+    Having the string  'id', 'Id' or 'ID' will then cause a column to be the ID
+    index within the combined ID-time stamp index for a given input file. If there
+    is no such label, the leftmost column with alphanumeric strings (for example, 'T12' or
+    '0123') will be taken as the ID.
 
     Args:
         raw_file (str): The input file.
@@ -103,27 +104,28 @@ def pickle_from_file(raw_file, picklepath=None, cycle=None, states=None,
     """Read delimited text file and create binary pickle file containing dict of
     records. The keys are named tuples containing numeric IDs and time stamps.
 
-    The raw files must each have a header and the first column on the left must
-    be a numeric ID.
+    See the example .csv data files at https://github.com/nickpowersys/caar
+
+    Example thermostat cycle file column headings: ThermostatId, CycleType, StartTime, EndTime.
+
+    Example inside temperature file column headings: ThermostatId, TimeStamp, Degrees.
+
+    Example outside temperature file column headings LocationId, TimeStamp, Degrees.
 
     The output can be filtered on records from a state or set of states by
     specifying a comma-delimited string containing state abbreviations.
     Otherwise, all available records will be in the output.
 
-    If a state or states are specified, a thermostats file and postal code
-    file must be in the arguments.
+    If a state or states are specified, a thermostats metadata file and postal
+    code file must be specified in the arguments and have the same ID columns
+    and ZipCode/PostalCode column headings in the same left-to-right order as in the examples.
 
-    See the example .csv data files at https://github.com/nickpowersys/caar
-
-    Thermostat cycle files should have these headings and corresponding row
-    values: "ThermostatId", "CycleType", "StartTime", "EndTime", and three
-    additional columns (dummy headings and values may be used).
-
-    Inside temperature files should have these headings and corresponding row
-    values: "ThermostatId", "LogDate", "Degrees".
-
-    Outside temperature files should have these headings and corresponding row
-    values: "LocationId", "LogDate", "Degrees".
+    In each file, the thermostat or location ID's should contain both letters and
+    digits in some combination  (leading zeroes are also allowed in place of letters).
+    Having the string  'id', 'Id' or 'ID' will then cause a column to be the ID
+    index within the combined ID-time stamp index for a given input file. If there
+    is no such label, the leftmost column with alphanumeric strings (for example, 'T12' or
+    '0123') will be taken as the ID.
 
     Args:
         raw_file (str): The input file.
