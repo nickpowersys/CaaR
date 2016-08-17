@@ -68,46 +68,68 @@ def state_fixture():
     return [STATE]
 
 
-@pytest.mark.parametrize("data_file, states, thermostats, postal, cycle",
+@pytest.mark.parametrize("data_file, states, thermostats, postal, cycle, auto",
+                          [(TEST_CYCLES_FILE, STATE, TEST_THERMOSTATS_FILE,
+                           TEST_POSTAL_FILE, CYCLE_TYPE_COOL, 'cycles'),
+                           (TEST_CYCLES_FILE, None, None, None, CYCLE_TYPE_COOL,
+                           'cycles'),
+                           (TEST_INSIDE_FILE, STATE, TEST_THERMOSTATS_FILE,
+                           TEST_POSTAL_FILE, CYCLE_TYPE_COOL, 'inside'),
+                           (TEST_INSIDE_FILE, None, None, None, CYCLE_TYPE_COOL,
+                           'inside'),
+                           (TEST_OUTSIDE_FILE, STATE, TEST_THERMOSTATS_FILE,
+                           TEST_POSTAL_FILE, None, 'outside'),
+                           (TEST_OUTSIDE_FILE, None, None, None,
+                           None, 'outside')])
+def test_select_clean_auto(data_file, states, thermostats, postal, cycle, auto):
+    clean_dict = ct.dict_from_file(data_file, cycle=cycle, states=states,
+                                   thermostats_file=thermostats,
+                                   postal_file=postal, auto=auto)
+    assert isinstance(clean_dict, dict)
+    assert len(clean_dict) > 0
+
+
+@slow
+@pytest.mark.parametrize("data_file, states, thermostats, postal, cycle, auto",
                          [(TEST_CYCLES_FILE, STATE, TEST_THERMOSTATS_FILE,
-                           TEST_POSTAL_FILE, CYCLE_TYPE_COOL),
-                          (TEST_CYCLES_FILE, None, None, None, CYCLE_TYPE_COOL),
-                          (TEST_CYCLES_FILE, STATE, TEST_THERMOSTATS_FILE,
-                           TEST_POSTAL_FILE, CYCLE_TYPE_COOL),
+                           TEST_POSTAL_FILE, CYCLE_TYPE_COOL, 'cycles'),
+                          (TEST_CYCLES_FILE, None, None, None, CYCLE_TYPE_COOL, 'cycles'),
                           (TEST_INSIDE_FILE, STATE, TEST_THERMOSTATS_FILE,
-                           TEST_POSTAL_FILE, CYCLE_TYPE_COOL),
-                          (TEST_INSIDE_FILE, None, None, None, CYCLE_TYPE_COOL),
+                           TEST_POSTAL_FILE, CYCLE_TYPE_COOL, 'inside'),
+                          (TEST_INSIDE_FILE, None, None, None, CYCLE_TYPE_COOL, 'inside'),
                           (TEST_OUTSIDE_FILE, STATE, TEST_THERMOSTATS_FILE,
-                           TEST_POSTAL_FILE, CYCLE_TYPE_COOL),
+                           TEST_POSTAL_FILE, CYCLE_TYPE_COOL, 'outside'),
                           (TEST_OUTSIDE_FILE, None, None, None,
-                           CYCLE_TYPE_COOL)])
-def test_select_clean(data_file, states, thermostats, postal, cycle):
+                           CYCLE_TYPE_COOL, 'outside')])
+def test_select_clean(data_file, states, thermostats, postal, cycle, auto):
     with open(data_file) as f:
-        header = ct._parse_line(f.readline())
-        clean_dict = ct._dict_from_lines_of_text(f, header, states=states, thermostats_file=thermostats,
-                                                 postal_file=postal, cycle=cycle)
+        clean_dict = ct.dict_from_file(f, cycle=cycle, states=states,
+                                       thermostats_file=thermostats, postal_file=postal,
+                                       auto=auto)
         assert isinstance(clean_dict, dict)
         assert len(clean_dict) > 0
 
 
-@pytest.mark.parametrize("data_file, states_to_clean, expected_path, thermostats, postal",
-                         [(TEST_CYCLES_FILE, STATE, CYCLES_PICKLE_FILE_OUT,
-                           TEST_THERMOSTATS_FILE, TEST_POSTAL_FILE),
-                          (TEST_CYCLES_FILE, None, ALL_STATES_CYCLES_PICKLED_OUT,
-                           None, None),
-                          (TEST_INSIDE_FILE, STATE, INSIDE_PICKLE_FILE_OUT,
-                           TEST_THERMOSTATS_FILE, TEST_POSTAL_FILE),
-                          (TEST_INSIDE_FILE, None, ALL_STATES_INSIDE_PICKLED_OUT,
-                           None, None),
-                          (TEST_OUTSIDE_FILE, STATE, OUTSIDE_PICKLE_FILE_OUT,
-                           TEST_THERMOSTATS_FILE, TEST_POSTAL_FILE),
-                          (TEST_OUTSIDE_FILE, None, ALL_STATES_OUTSIDE_PICKLED_OUT,
-                           None, None)])
-def test_pickle_cycles_inside_outside(tmpdir, data_file, states_to_clean, expected_path,
-                                      thermostats, postal):
-    filename = tmpdir.join(ct._pickle_filename(data_file, states_to_clean))
-    pickle_path = ct.pickle_from_file(data_file, picklepath=filename, states=states_to_clean,
-                                      thermostats_file=thermostats, postal_file=postal)
+@pytest.mark.parametrize("tempdir, data_file, cycle, states_to_clean, "
+                         "expected_path, thermostats, postal, auto, encoding",
+                         [(tmpdir(), TEST_CYCLES_FILE, CYCLE_TYPE_COOL, STATE, CYCLES_PICKLE_FILE_OUT,
+                           TEST_THERMOSTATS_FILE, TEST_POSTAL_FILE, 'cycles', 'UTF-8'),
+                          (tmpdir(), TEST_CYCLES_FILE, CYCLE_TYPE_COOL, None, ALL_STATES_CYCLES_PICKLED_OUT,
+                           None, None, 'cycles', 'UTF-8'),
+                          (tmpdir(), TEST_INSIDE_FILE, None, STATE, INSIDE_PICKLE_FILE_OUT,
+                           TEST_THERMOSTATS_FILE, TEST_POSTAL_FILE, 'inside', 'UTF-8'),
+                          (tmpdir(), TEST_INSIDE_FILE, None, None, ALL_STATES_INSIDE_PICKLED_OUT,
+                           None, None, 'inside', 'UTF-8'),
+                          (tmpdir(), TEST_OUTSIDE_FILE, None, STATE, OUTSIDE_PICKLE_FILE_OUT,
+                           TEST_THERMOSTATS_FILE, TEST_POSTAL_FILE, 'outside', 'UTF-8'),
+                          (tmpdir(), TEST_OUTSIDE_FILE, None, None, ALL_STATES_OUTSIDE_PICKLED_OUT,
+                           None, None, 'outside', 'UTF-8')])
+def test_pickle_cycles_inside_outside(tempdir, data_file, cycle, states_to_clean, expected_path,
+                                      thermostats, postal, auto, encoding):
+    filename = tempdir.join(ct._pickle_filename(data_file, states_to_clean, auto, encoding))
+    pickle_path = ct.pickle_from_file(data_file, picklepath=filename, cycle=cycle,
+                                      states=states_to_clean, thermostats_file=thermostats,
+                                      postal_file=postal, auto=auto, encoding=encoding)
     pickle_file = os.path.basename(pickle_path)
     assert pickle_file == os.path.basename(expected_path)
 

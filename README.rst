@@ -3,15 +3,17 @@ CaaR - Cooling as a Resource
 
 The objective of this project is to convert recorded observations about thermostat ON/OFF cycles in cooling or heating modes into indexed time series in pandas and NumPy.
 
-The primary data is expected to be from these main sources (but is not limited to them):
+The package's functionality can easily work with other types of data. For example, batteries also involve duty cycles. The package can also be used with time-stamped observations of state of charge or other measurements.
+
+By convention, the primary time-stamped data will be from these sources:
 
 * cooling and heating cycles within buildings
 * indoor temperature data, and
 * local weather observations
 
-Although they may be recorded independently, data can be matched based on devices, locations and time, in order to form multi-dimensional time series.
+The package will format raw data and match the results across the sources based on metadata such as device ID's and/or location ID's and time, in order to form multi-dimensional time series.
 
-In order to maximize the utility of the package, it is possible to git clone the project, modify the configuration file, config.ini, and modify the values specified there that indicate the column headings (labels) and their positions (index) within a set of delimited text files. The example data files within the data folder are consistent with the current mapping in config.ini, and therefore provide a starting reference.
+It can automatically detect the type of data in each column of a text file, based on the data itself and based on column labels. The detection allows for any ordering of columns in the input data.
 
 Note the need for metadata files for both thermostats and zip codes. Example files are also in the data folder.
 
@@ -24,11 +26,7 @@ This project is intended to accelerate analysis of time-stamped data including t
 Installation and How to Start Using
 ===================================
 
-For maximum flexibility, the repository at Github (see link below) can be git cloned, and the config.ini file may be edited as described above. To get a quick understanding, see the link below for the sample data files. Config.ini is within the *caar* folder.
-
-    :code:`git clone https://github.com/nickpowersys/CaaR.git`
-
-Otherwise, the package may be installed using *pip* or *conda*.
+The package may be installed using *pip* or *conda*.
 
 **Python versions supported:**
 
@@ -72,6 +70,14 @@ Overview
 Sample input files are in the data directory at https://github.com/nickpowersys/CaaR.
 
 CaaR can be used to **read delimited text files** and (optionally) save the data in Python pickle files for fast access.
+
+Common delimited text file formats including commas, tabs, pipes and spaces are detected in that order within the first row and the first delimiter detected is used. In all cases, rows are only used if the number of values match the number of column labels in the first row.
+
+Each input file is expected to have (at least) columns representing ID's, time stamps (or starting and ending time stamps for cycles), and (if not cycles) corresponding observations.
+
+To use the automatic column detection functionality, use the keyword argument 'auto' within the pickle_from_file() or dict_from_file() function (see the notebook example or API documentation) and assign it one of the values: 'cycles', 'inside', or 'outside' (for example, auto='inside').
+
+The ID's should contain both letters and digits in some combination (leading zeroes are also allowed in place of letters). Having the string 'id', 'Id' or 'ID' will then cause a column to be the ID index within the combined ID-time stamp index for a given input file. If there is no such label, the leftmost column with alphanumeric strings (for example, 'T12' or '0123') will be taken as the ID.
 
 Next, CaaR can **create pandas DataFrames**. CaaR and the pandas library offer many functions for summarizing and analyzing the data.
 

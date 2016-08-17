@@ -32,7 +32,9 @@ CYCLE_END_TIME = parser.get('file_headers', 'CYCLE_END_TIME')
 # Ints: 0-based column position within the raw file (left to right)
 CYCLE_TYPE_INDEX = int(parser.get('file_headers', 'CYCLE_TYPE_INDEX'))
 CYCLE_START_INDEX = int(parser.get('file_headers', 'CYCLE_START_INDEX'))
-CYCLE_VALUES_START = int(parser.get('file_headers', 'CYCLE_VALUES_START'))
+CYCLE_END_TIME_INDEX = int(parser.get('file_headers', 'CYCLE_END_TIME_INDEX'))
+CYCLE_RECORD_COLS = sum([1 for col in [CYCLE_TYPE_INDEX, CYCLE_START_INDEX,
+                                       CYCLE_END_TIME_INDEX]])
 
 unique_cycle_field_pos = int(parser.get('file_headers', 'UNIQUE_CYCLE_FIELD_INDEX'))
 
