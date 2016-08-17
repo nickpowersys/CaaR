@@ -31,7 +31,7 @@ def dict_from_file(raw_file, cycle=None, states=None,
     """Read delimited text file and create dict of records. The keys are named
     2-tuples containing numeric IDs and time stamps.
 
-    See the example .csv data files at https://github.com/nickpowersys/caar
+    See the example .csv data files at https://github.com/nickpowersys/caar.
 
     Example thermostat cycle file column headings: ThermostatId, CycleType, StartTime, EndTime.
 
@@ -39,20 +39,30 @@ def dict_from_file(raw_file, cycle=None, states=None,
 
     Example outside temperature file column headings LocationId, TimeStamp, Degrees.
 
-    The output can be filtered on records from a state or set of states by
-    specifying a comma-delimited string containing state abbreviations.
-    Otherwise, all available records will be in the output.
+    Common delimited text file formats including commas, tabs, pipes and spaces are detected in
+    that order within the first row and the first delimiter detected is used. In all cases, rows
+    are only used if the number of values match the number of column labels in the first row.
 
-    If a state or states are specified, a thermostats metadata file and postal
-    code file must be specified in the arguments and have the same ID columns
-    and ZipCode/PostalCode column headings in the same left-to-right order as in the examples.
+    Each input file is expected to have (at least) columns representing ID's, time stamps (or
+    starting and ending time stamps for cycles), and (if not cycles) corresponding observations.
 
-    In each file, the thermostat or location ID's should contain both letters and
-    digits in some combination  (leading zeroes are also allowed in place of letters).
-    Having the string  'id', 'Id' or 'ID' will then cause a column to be the ID
-    index within the combined ID-time stamp index for a given input file. If there
+    To use the automatic column detection functionality, use the keyword argument 'auto' and
+    assign it one of the values: 'cycles', 'inside', or 'outside'.
+
+    The ID's should contain both letters and digits in some combination (leading zeroes are also
+    allowed in place of letters). Having the string 'id', 'Id' or 'ID' will then cause a column
+    to be the ID index within the combined ID-time stamp index for a given input file. If there
     is no such label, the leftmost column with alphanumeric strings (for example, 'T12' or
     '0123') will be taken as the ID.
+
+    The output can be filtered on records from a state or set of states by specifying a
+    comma-delimited string containing state abbreviations. Otherwise, all available records
+    will be in the output.
+
+    If a state or states are specified, a thermostats metadata file and postal
+    code file must be specified in the arguments and have the same location ID columns
+    and ZipCode/PostalCode column headings in the same left-to-right order as in the examples.
+    For the other columns, dummy values may be used if there is no actual data.
 
     Args:
         raw_file (str): The input file.
@@ -104,7 +114,7 @@ def pickle_from_file(raw_file, picklepath=None, cycle=None, states=None,
     """Read delimited text file and create binary pickle file containing dict of
     records. The keys are named tuples containing numeric IDs and time stamps.
 
-    See the example .csv data files at https://github.com/nickpowersys/caar
+    See the example .csv data files at https://github.com/nickpowersys/caar.
 
     Example thermostat cycle file column headings: ThermostatId, CycleType, StartTime, EndTime.
 
@@ -112,20 +122,30 @@ def pickle_from_file(raw_file, picklepath=None, cycle=None, states=None,
 
     Example outside temperature file column headings LocationId, TimeStamp, Degrees.
 
-    The output can be filtered on records from a state or set of states by
-    specifying a comma-delimited string containing state abbreviations.
-    Otherwise, all available records will be in the output.
+    Common delimited text file formats including commas, tabs, pipes and spaces are detected in
+    that order within the first row and the first delimiter detected is used. In all cases, rows
+    are only used if the number of values match the number of column labels in the first row.
 
-    If a state or states are specified, a thermostats metadata file and postal
-    code file must be specified in the arguments and have the same ID columns
-    and ZipCode/PostalCode column headings in the same left-to-right order as in the examples.
+    Each input file is expected to have (at least) columns representing ID's, time stamps (or
+    starting and ending time stamps for cycles), and (if not cycles) corresponding observations.
 
-    In each file, the thermostat or location ID's should contain both letters and
-    digits in some combination  (leading zeroes are also allowed in place of letters).
-    Having the string  'id', 'Id' or 'ID' will then cause a column to be the ID
-    index within the combined ID-time stamp index for a given input file. If there
+    To use the automatic column detection functionality, use the keyword argument 'auto' and
+    assign it one of the values: 'cycles', 'inside', or 'outside'.
+
+    The ID's should contain both letters and digits in some combination (leading zeroes are also
+    allowed in place of letters). Having the string 'id', 'Id' or 'ID' will then cause a column
+    to be the ID index within the combined ID-time stamp index for a given input file. If there
     is no such label, the leftmost column with alphanumeric strings (for example, 'T12' or
     '0123') will be taken as the ID.
+
+    The output can be filtered on records from a state or set of states by specifying a
+    comma-delimited string containing state abbreviations. Otherwise, all available records
+    will be in the output.
+
+    If a state or states are specified, a thermostats metadata file and postal
+    code file must be specified in the arguments and have the same location ID columns
+    and ZipCode/PostalCode column headings in the same left-to-right order as in the examples.
+    For the other columns, dummy values may be used if there is no actual data.
 
     Args:
         raw_file (str): The input file.
