@@ -93,13 +93,19 @@ def dict_from_file(raw_file, cycle=None, states=None,
             return 0
 
     with open(raw_file, encoding=encoding) as fin:
-        header, delimiter, quote = _parse_first_line(fin.readline())
+        header = _parse_first_line(fin.readline())
         kwargs['header'] = header
+
+        sample_records, delimiter, quote = _sample_records(fin, header)
+        kwargs['sample_records'] = sample_records
         kwargs['delimiter'] = delimiter
         kwargs['quote'] = quote
 
-        sample_records = _sample_records(fin, header, delimiter, quote)
-        kwargs['sample_records'] = sample_records
+    # Detect cycles column
+    if cycle and kwargs.get('auto') == 'cycles':
+        cycle_col = _detect_cycle_col(raw_file, sample_records, header,
+                                      cycle, delimiter, encoding=encoding)
+        kwargs['cycle_col'] = cycle_col
 
     with open(raw_file, encoding=encoding) as f:
         _ = f.readline()
@@ -200,7 +206,7 @@ def _pickle_filename(text_file, states_to_clean, auto, encoding):
     commas. If all states are desired, states_to_clean should be None.
     """
     with open(text_file, encoding=encoding) as f:
-        header, _, _ = _parse_first_line(f.readline())
+        header = _parse_first_line(f.readline())
     data_type = auto if auto else _data_type_matching_header(header)
     if states_to_clean:
         states = states_to_clean.split(',')
@@ -263,10 +269,9 @@ def _dict_from_lines_of_text(lines_to_clean, **kwargs):
 
 
 def _clean_cycles_auto_detect(lines, **kwargs):
-    sample_records, header, cycle_mode = (kwargs.get(k) for k in
-                                          ['sample_records', 'header', 'cycle'])
+    header, cycle_mode = (kwargs.get(k) for k in ['header', 'cycle'])
     # Get column indexes of time stamps, ids and values within the array
-    cols = _detect_all_cycle_data_cols(sample_records, header, cycle_mode)
+    cols = _detect_all_cycle_data_cols(**kwargs)
     header_len = len(header)
     states_selected = kwargs.get('states')
     if states_selected:
@@ -289,6 +294,7 @@ def _validate_cycle_add_to_dict_auto(lines, header_len, delimiter, cols,
                                      cycle_mode=None, thermos_ids=None,
                                      quote=None):
     clean_records = {}
+
     for line in lines:
         if _line_contains_digits(line):
             record = _parse_line(line, delimiter, quote=quote)
@@ -296,21 +302,18 @@ def _validate_cycle_add_to_dict_auto(lines, header_len, delimiter, cols,
                 continue
         else:
             continue
-        # Put data into the form expected by validate_cycles
-        core_record = _core_cycle_record(record, cols)
-        # Validate core record values
-        if _validate_cycles_auto_record(core_record, cycle_mode=cycle_mode,
+
+        if _validate_cycles_auto_record(record, cols, cycle_mode=cycle_mode,
                                         ids=thermos_ids):
             # Cycle named tuple declaration is global, in order to ensure
             # that named tuples using it can be pickled.
             # Cycle = namedtuple('Cycle', ['thermo_id', 'cycle_mode',
             # 'start_time'])
-            multiidcols = Cycle(thermo_id=_standard_primary_id(core_record),
+            multiidcols = Cycle(thermo_id=record[cols['id_col']],
                                 cycle_mode=cycle_mode,
-                                start_time=_cycle_start_time_id(core_record))
+                                start_time=record[cols['start_time_col']])
             vals_tuple = _cycle_record_vals_auto(record, cols)
             clean_records[multiidcols] = vals_tuple
-
     return clean_records
 
 
@@ -325,9 +328,11 @@ def _core_cycle_record(raw_record, cols):
     return core_record
 
 
-def _detect_all_cycle_data_cols(sample_records, header, cycle_mode):
+def _detect_all_cycle_data_cols(**kwargs):
+    sample_records, cycle_col, header = (kwargs.get(k) for k in
+                                         ['sample_records', 'cycle_col',
+                                          'header'])
     time_stamp_col_1, time_stamp_col_2 = _detect_time_stamps(sample_records)
-    cycle_col = _detect_cycle_col(sample_records, header, cycle_mode)
     id_col = _detect_id_col(sample_records, header,
                             [time_stamp_col_1, time_stamp_col_2],
                             cycle_col=cycle_col)
@@ -344,10 +349,9 @@ def _cycle_start_time_id(core_record):
 
 
 def _clean_inside_auto_detect(lines, **kwargs):
-    sample_records, header = (kwargs.get(k) for k in ['sample_records',
-                                                      'header'])
+    header = kwargs.get('header')
     # Get column indexes of time stamps, ids and values within the array
-    cols = _detect_all_inside_data_cols(sample_records, header)
+    cols = _detect_all_inside_data_cols(**kwargs)
     header_len = len(header)
     states_selected = kwargs.get('states')
     if states_selected:
@@ -365,7 +369,9 @@ def _clean_inside_auto_detect(lines, **kwargs):
     return clean_records
 
 
-def _detect_all_inside_data_cols(sample_records, header):
+def _detect_all_inside_data_cols(**kwargs):
+    sample_records, header = (kwargs.get(k) for k in ['sample_records',
+                                                      'header'])
     time_stamp, _ = _detect_time_stamps(sample_records)
     id_col = _detect_id_col(sample_records, header, [time_stamp])
     cols = {k: col for k, col in [('id_col', id_col),
@@ -383,15 +389,13 @@ def _validate_inside_add_to_dict_auto(lines, header_len, delimiter, cols,
                 continue
         else:
             continue
-        # Put data into the form expected by validate_cycles
-        core_record = _core_inside_record(record, cols)
-        # Validate core record values
-        if _validate_inside_auto_record(core_record, ids=thermos_ids):
+
+        if _validate_inside_auto_record(record, cols, ids=thermos_ids):
             # Inside named tuple declaration is global, in order to ensure
             # that named tuples using it can be pickled.
             # Inside = namedtuple('Inside', ['thermo_id', 'log_date'])
-            multiidcols = Inside(thermo_id=_standard_primary_id(core_record),
-                                 log_date=_time_id(core_record))
+            multiidcols = Inside(thermo_id=record[cols['id_col']],
+                                 log_date=record[cols['time_col']])
             vals_tuple = _inside_record_vals_auto(record, cols)
             clean_records[multiidcols] = vals_tuple
         else:
@@ -406,14 +410,10 @@ def _core_inside_record(raw_record, cols):
     return core_record
 
 
-def _validate_inside_auto_record(record, ids=None):
+def _validate_inside_auto_record(record, cols, ids=None):
     """Validate that standardized record has expected data content.
     """
-    if all([_validate_id(record, ids),
-            [_validate_time_stamp(record['time'])]]):
-        return True
-    else:
-        return False
+    return _validate_id(record[cols['id_col']], ids)
 
 
 def _time_id(record):
@@ -430,11 +430,9 @@ def _inside_record_vals_auto(record, cols):
 
 
 def _clean_outside_auto_detect(lines, **kwargs):
-    header, delimiter, quote, sample_records = (kwargs.get(k) for k in
-                                                ['header', 'delimiter',
-                                                 'quote', 'sample_records'])
+    header = kwargs.get('header')
     # Get column indexes of time stamps, ids and values within the array
-    cols = _detect_all_outside_data_cols(sample_records, header)
+    cols = _detect_all_outside_data_cols(**kwargs)
     header_len = len(header)
     states_selected = kwargs.get('states')
     if states_selected:
@@ -443,6 +441,7 @@ def _clean_outside_auto_detect(lines, **kwargs):
                         .astype(np.unicode))
     else:
         location_ids = None
+    delimiter, quote = (kwargs.get(k) for k in ['delimiter', 'quote'])
     clean_records = _validate_outside_add_to_dict_auto(lines, header_len,
                                                        delimiter, cols,
                                                        location_ids=location_ids,
@@ -450,7 +449,9 @@ def _clean_outside_auto_detect(lines, **kwargs):
     return clean_records
 
 
-def _detect_all_outside_data_cols(sample_records, header):
+def _detect_all_outside_data_cols(**kwargs):
+    sample_records, header = (kwargs.get(k) for k in ['sample_records',
+                                                      'header'])
     time_stamp, _ = _detect_time_stamps(sample_records)
     id_col = _detect_id_col(sample_records, header, [time_stamp])
     cols = {k: col for k, col in [('id_col', id_col),
@@ -468,15 +469,13 @@ def _validate_outside_add_to_dict_auto(lines, header_len, delimiter, cols,
                 continue
         else:
             continue
-        # Put data into the form expected by validate_cycles
-        core_record = _core_outside_record(record, cols)
-        # Validate core record values
-        if _validate_outside_auto_record(core_record, ids=location_ids):
+
+        if _validate_outside_auto_record(record, cols, ids=location_ids):
             # Outside named tuple declared globally to enable pickling.
             # The following is here for reference.
             # Outside = namedtuple('Outside', ['location_id', 'log_date'])
-            multiidcols = Outside(location_id=_standard_primary_id(core_record),
-                                  log_date=_time_id(core_record))
+            multiidcols = Outside(location_id=record[cols['id_col']],
+                                  log_date=record[cols['time_col']])
             vals_tuple = _outside_record_vals_auto(record, cols)
             clean_records[multiidcols] = vals_tuple
         else:
@@ -491,14 +490,10 @@ def _core_outside_record(raw_record, cols):
     return core_record
 
 
-def _validate_outside_auto_record(record, ids=None):
+def _validate_outside_auto_record(record, cols, ids=None):
     """Validate that standardized record has expected data content.
     """
-    if all([_validate_id(record, ids),
-            [_validate_time_stamp(record['time'])]]):
-        return True
-    else:
-        return False
+    return _validate_id(record[cols['id_col']], ids)
 
 
 def _outside_record_vals_auto(record, cols):
@@ -510,22 +505,40 @@ def _outside_record_vals_auto(record, cols):
     return vals
 
 
-def _sample_records(lines, header, delimiter, quote=None):
+def _sample_records(lines, header, delimiter=None, quote=None):
     """Creates NumPy array with first 1,000 raw lines"""
+
+    for i, line in enumerate(lines):
+
+        if delimiter is None:
+            delimiter = _determine_delimiter(line)
+
+        if quote is None:
+            quote = _determine_quote(line)
+            if delimiter and quote:
+                break
+
+        if i == 100:
+            break
+
     header_len = len(header)
     sample_records = []
+
     for line in lines:  # read lines
         if _line_contains_digits(line):
             record = _parse_line(line, delimiter, quote=quote)
 
-            if len(record) == header_len:
+            if len(record) == header_len and all(record):
                 sample_records.append(record)
             else:
                 continue
 
             if len(sample_records) == 1000:
                 break
-    return np.array(sample_records)
+
+    sample_record_array = np.array(sample_records)
+
+    return sample_record_array, delimiter, quote
 
 
 def _detect_time_stamps(sample_records):
@@ -535,11 +548,12 @@ def _detect_time_stamps(sample_records):
     first_record = sample_records[0]
     for col, val in enumerate(first_record):
         if ':' in val or '/' in val:
-            if first_time_stamp_col is None:
-                first_time_stamp_col = col
-            else:
-                second_time_stamp_col = col
-                break
+            if _validate_time_stamp(val):
+                if first_time_stamp_col is None:
+                    first_time_stamp_col = col
+                else:
+                    second_time_stamp_col = col
+                    break
     return first_time_stamp_col, second_time_stamp_col
 
 
@@ -593,6 +607,41 @@ def _compare_col_with_max(col, column_vals, func, current_max, current_max_col):
     return current_max, current_max_col
 
 
+def _numeric_cols(sample_records):
+
+    numeric_cols = []
+
+    for record in sample_records:
+        record_as_list = list(record)
+        # Verify the row is a record and not a header
+        if _line_contains_digits(str(record_as_list)):
+            for col, val in enumerate(record_as_list):
+                if val.isdigit():
+                    numeric_cols.append(col)
+            if len(numeric_cols) == len(record_as_list):
+                break
+
+    return numeric_cols
+
+
+def _time_cols(sample_records):
+
+    time_cols = []
+
+    for record in sample_records:
+        # record = sample_records[row]
+        record_as_list = list(record)
+        # Verify the row is a record and not a header
+        if _line_contains_digits(str(record_as_list)):
+            time_col_1, time_col_2 = _detect_time_stamps(sample_records)
+            time_cols.append(time_col_1)
+            if time_col_2 is not None:
+                time_cols.append(time_col_2)
+                if len(time_cols) == 2:
+                    break
+    return time_cols
+
+
 def _detect_mixed_alpha_numeric_id_col(alphanumeric_cols, header, sample_records):
     id_col = None
     if (0 in alphanumeric_cols and _header_label_contains_id(header, 0) and
@@ -609,21 +658,26 @@ def _detect_mixed_alpha_numeric_id_col(alphanumeric_cols, header, sample_records
     return id_col
 
 
-def _detect_cycle_col(sample_records, header, cycle_mode):
-    if cycle_mode is None:
-        return None
-    else:
-        header_len = len(header)
-        for row in range(100):
-            record = sample_records[row, :]
-            record_as_list = list(record)
-            if _line_contains_digits(str(record_as_list)):
-                cycle_col = _detect_cycle_col_in_record(record_as_list,
-                                                        cycle_mode, header_len)
-            else:
-                continue
+def _detect_cycle_col(raw_file, sample_records, header, cycle_mode, delimiter,
+                      encoding=None):
+    cycle_col = None
+    all_cols = set(range(len(header)))
+    cols_to_ignore = _time_cols(sample_records) + _numeric_cols(sample_records)
+    ignore_col_set = set(cols_to_ignore)
+    possible_cycle_cols = list(all_cols - ignore_col_set)
+
+    with open(raw_file, encoding=encoding) as fin:
+        for line in fin:
+            if _line_contains_digits(line):
+                for col, val in enumerate(_parse_line(line, delimiter)):
+                    if col in possible_cycle_cols and cycle_mode in val:
+                        cycle_col = col
+                        break
             if cycle_col:
                 break
+    if cycle_col is None:
+        raise ValueError('No column found containing value ' + cycle_mode)
+
     return cycle_col
 
 
@@ -649,13 +703,22 @@ def _header_label_contains_id(header, col_index):
 
 
 def _primary_id_col_from_two_fields(sample_records):
-    ids_in_col_0 = len(np.unique(sample_records[:, 0]))
-    ids_in_col_1 = len(np.unique(sample_records[:, 1]))
-    if ids_in_col_0 >= ids_in_col_1:
+    ids_in_col_0 = _ids_in_col(sample_records, 0)
+    ids_in_col_1 = _ids_in_col(sample_records, 1)
+
+    if len(ids_in_col_0) >= len(ids_in_col_1):
         id_col = 0
     else:
         id_col = 1
     return id_col
+
+
+def _ids_in_col(sample_records, col):
+    ids = []
+    for record in sample_records:
+        ids.append(record[col])
+    id_arr = np.unique(np.array(ids))
+    return id_arr
 
 
 def _col_with_alpha_or_alphas_in_string(records, header, alphanumeric_cols):
@@ -694,33 +757,26 @@ def _cycle_record_vals_auto(record, cols):
     return vals
 
 
-def _validate_cycles_auto_record(record, cycle_mode=None, ids=None):
+def _validate_cycles_auto_record(record, cols, cycle_mode=None, ids=None):
     """Validate that standardized record has expected data content.
     """
-    if all([_validate_cycle_mode(record, cycle_mode), _validate_id(record, ids),
-           [_validate_time_stamp(record[t]) for t in ['start_time',
-                                                      'end_time']]]):
-        return True
+    if cols.get('cycle_col'):
+        return all([_validate_cycle_mode(record[cols['cycle_col']], cycle_mode),
+                   _validate_id(record[cols['id_col']], ids)])
     else:
-        return False
+        return _validate_id(record[cols['id_col']], ids)
 
 
-def _validate_cycle_mode(record, cycle_mode):
-    if cycle_mode is None:
-        return True
-    elif record['cycle'] == cycle_mode:
+def _validate_cycle_mode(cycle, cycle_mode):
+    if cycle == cycle_mode:
         return True
     # Cycle mode does not match the mode specified in the kwargs
     else:
         return False
 
 
-def _validate_id(record, ids):
-    if not _standard_primary_id(record):
-        return False
-
-    if any([(ids is not None and _standard_primary_id(record) in ids),
-            ids is None]):
+def _validate_id(id, ids):
+    if any([ids is not None and id in ids, ids is None]):
         return True
 
     return False
@@ -913,7 +969,7 @@ def _thermostats_states(**kwargs):
     zip_codes_df = _zip_codes_in_states(postal_file, states, auto)
     thermos_df = _thermostats_df(thermostats_file, auto)
     if auto:
-        _, header, _, _ = _file_header(thermostats_file)
+        header = _file_header(thermostats_file)
 
         zip_heading = _label_of_col_containing_string_lower_upper_title(header, 'zip')
     else:
@@ -928,15 +984,15 @@ def _thermostats_states(**kwargs):
 
 def _file_header(raw_file):
     with open(raw_file) as f:
-        header, delimiter, quote = _parse_first_line(f.readline())
-    return f, header, delimiter, quote
+        header = _parse_first_line(f.readline())
+    return header
 
 
 def _zip_codes_in_states(postal_file, states, auto):
     """Returns pandas dataframe based on postal code metadata file, for states
      specified as list.
      """
-    _, header, _, _ = _file_header(postal_file)
+    header = _file_header(postal_file)
     if auto:
         zip_col = _index_of_col_with_string_in_lower_upper_or_title(header, 'zip')
         if zip_col is None:
@@ -964,8 +1020,8 @@ def _zip_codes_in_states(postal_file, states, auto):
 def _thermostats_df(thermostats_file, auto):
     """Returns pandas dataframe of thermostat metadata from raw file."""
     with open(thermostats_file) as f:
-        header, delimiter, quote = _parse_first_line(f.readline())
-        sample_records = _sample_records(f, header, delimiter, quote=quote)
+        header = _parse_first_line(f.readline())
+        sample_records, _, _ = _sample_records(f, header)
 
     if auto:
         zip_col = _index_of_col_with_string_in_lower_upper_or_title(header,
@@ -1039,16 +1095,18 @@ def _cycle_record_vals(record):
 
 def _parse_first_line(line, delimiter=None):
     if delimiter is None:
-        delimiter, quote = _determine_delimiter(line)
+        delimiter = _determine_delimiter(line)
 
     line = line.rstrip(delimiter + '\n')
+
+    quote = _determine_quote(line)
 
     if quote:
         line = tuple(_remove_quotes(item, quote) for item in line.split(delimiter))
     else:
-        line = tuple(item for item in line.split(delimiter))
+        line = tuple(line.split(delimiter))
 
-    return line, delimiter, quote
+    return line
 
 
 def _parse_line(line, delimiter, quote=None):
@@ -1063,6 +1121,12 @@ def _parse_line(line, delimiter, quote=None):
     return line
 
 
+def _parse_line_with_strings_in_quotes(line, delimiter, quote):
+    line = line.rstrip('\n')
+    line = tuple(_remove_quotes(item, quote) for item in line.split(delimiter))
+    return line
+
+
 def _determine_delimiter(line):
     delimch = None
     for d in [',', '\t', '|']:
@@ -1070,13 +1134,17 @@ def _determine_delimiter(line):
         if bool(delimre.search(line)):
             delimch = d
             break
+    return delimch
+
+
+def _determine_quote(line):
     quotech = None
     for q in ['\"', '\'']:
         quotere = re.compile(q + '\D')
         if bool(quotere.search(line)):
             quotech = q
             break
-    return delimch, quotech
+    return quotech
 
 
 def _line_is_record(line):
