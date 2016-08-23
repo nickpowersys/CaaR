@@ -302,7 +302,6 @@ def _dict_from_lines_of_text(raw_file, **kwargs):
 
     with open(raw_file, encoding=encoding) as lines_to_clean:
         _ = lines_to_clean.readline()
-    #    cols_meta, clean_dict = cleaning_function(lines_to_clean, **kwargs)
         records_or_meta = cleaning_function(lines_to_clean, **kwargs)
 
     return records_or_meta
