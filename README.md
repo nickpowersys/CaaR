@@ -14,7 +14,7 @@ The package will format raw data and match the results across the sources based 
 
 It can automatically detect the type of data in each column of a text file, based on the data itself and based on column labels. The detection allows for any ordering of columns in the input data.
 
-Note the need for metadata files for both thermostats and zip codes. Example files are in the data folder.
+In order to select data relating to thermostats or temperatures in zip codes in specific states, metadata files are needed. Example files are also in the data folder.
 
 ## Motivation
 
