@@ -129,8 +129,8 @@ def dict_from_file(raw_file, cycle=None, states=None,
 def pickle_from_file(raw_file, picklepath=None, cycle=None, states=None,
                      thermostats_file=None, postal_file=None, auto=None,
                      encoding='UTF-8', delimiter=None, quote=None):
-    """Read delimited text file and create binary pickle file containing tuple with 1) dict
-     of column meta-data and 2) dict of records. The keys are named tuples containing
+    """Read delimited text file and create binary pickle file containing tuple with a dict
+     of column meta-data, and a dict of records. The keys are named tuples containing
      numeric IDs (strings) and time stamps.
 
     See the example .csv data files at https://github.com/nickpowersys/caar.
@@ -242,7 +242,7 @@ def _pickle_filename(text_file, states_to_clean, auto, encoding):
 
 
 def _dict_from_lines_of_text(raw_file, **kwargs):
-    """Returns a tuple containing 1) a dict of column meta-data and 2) dict of records
+    """Returns a tuple containing a dict of column meta-data and a dict of records
     whose keys and values correspond to 1) indoor temperatures, 2) cooling or heating
     cycling intervals or 3) outdoor temperatures. The keys of headers_functions are
     tuples containing strings with the column labels (headings) from the raw text files.
