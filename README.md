@@ -1,6 +1,6 @@
 # CaaR - Cooling as a Resource (Beta Release)
 
-The objective of this project is to convert recorded observations about thermostat ON/OFF cycles in cooling or heating modes into indexed time series in pandas and NumPy.
+The objective of this project is to convert observations of temperatures and thermostat ON/OFF cycles in cooling or heating modes from text files into indexed time series in pandas and NumPy.
 
 The package's functionality can easily work with other types of data. For example, batteries also involve duty cycles. The package can also be used with time-stamped observations of state of charge or other measurements.
 
