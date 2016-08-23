@@ -39,7 +39,6 @@ The package may be installed using *pip* or *conda*.
 * pandas
 * NumPy
 * future
-* click
 
 Assuming no version is specified, the latest version of *caar* will be installed.
 
