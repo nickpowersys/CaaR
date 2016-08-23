@@ -20,7 +20,7 @@ Inside = namedtuple('Inside', ['thermo_id', 'log_date'])
 Outside = namedtuple('Outside', ['location_id', 'log_date'])
 
 
-def create_inside_df(tuple_or_pickle_file, thermo_ids=None,
+def create_inside_df(dict_or_pickle_file, thermo_ids=None,
                      strptime_format=None):
     """Returns pandas DataFrame containing thermostat ID, timestamps and
     inside temperatures at the time of cooling (or heating) cycles starting
@@ -37,7 +37,7 @@ def create_inside_df(tuple_or_pickle_file, thermo_ids=None,
         inside_df (pandas DataFrame): DataFrame has MultiIndex based on the
         ID(s) and timestamps.
     """
-    multi_ids, vals = _records_as_lists_of_tuples(tuple_or_pickle_file,
+    multi_ids, vals = _records_as_lists_of_tuples(dict_or_pickle_file,
                                                   'thermo_id', 'log_date',
                                                   ids=thermo_ids,
                                                   strptime_format=strptime_format)
@@ -47,7 +47,7 @@ def create_inside_df(tuple_or_pickle_file, thermo_ids=None,
     return inside_df
 
 
-def create_cycles_df(tuple_or_pickle_file, thermo_ids=None, strptime_format=None):
+def create_cycles_df(dict_or_pickle_file, thermo_ids=None, strptime_format=None):
     """Returns pandas DataFrame containing thermostat ids and cycle beginning
     timestamps as multi-part indexes, and cycle ending times as values.
 
@@ -62,7 +62,7 @@ def create_cycles_df(tuple_or_pickle_file, thermo_ids=None, strptime_format=None
         cycles_df (pandas DataFrame): DataFrame has MultiIndex based on the ID(s) and timestamps.
     """
 
-    multi_ids, vals = _records_as_lists_of_tuples(tuple_or_pickle_file,
+    multi_ids, vals = _records_as_lists_of_tuples(dict_or_pickle_file,
                                                   'thermo_id', 'start_time',
                                                   ids=thermo_ids,
                                                   strptime_format=strptime_format)
@@ -71,7 +71,7 @@ def create_cycles_df(tuple_or_pickle_file, thermo_ids=None, strptime_format=None
     return cycles_df
 
 
-def create_outside_df(tuple_or_pickle_file, location_ids=None,
+def create_outside_df(dict_or_pickle_file, location_ids=None,
                       strptime_format=None):
     """Returns pandas DataFrame containing records with location IDs and time
     stamps as multi-part indexes and outdoor temperatures as values.
@@ -86,7 +86,7 @@ def create_outside_df(tuple_or_pickle_file, location_ids=None,
     Returns:
         outside_df (pandas DataFrame): DataFrame has MultiIndex based on the ID(s) and timestamps.
     """
-    multi_ids, vals = _records_as_lists_of_tuples(tuple_or_pickle_file,
+    multi_ids, vals = _records_as_lists_of_tuples(dict_or_pickle_file,
                                                   'location_id', 'log_date',
                                                   ids=location_ids,
                                                   strptime_format=strptime_format)
@@ -96,7 +96,7 @@ def create_outside_df(tuple_or_pickle_file, location_ids=None,
     return outside_df
 
 
-def _records_as_lists_of_tuples(tuple_or_pickle_file, id_field, time_field,
+def _records_as_lists_of_tuples(dict_or_pickle_file, id_field, time_field,
                                 ids=None, strptime_format=None):
     """Returns tuple containing
     1) a list of named tuples containing thermostat (or outdoor location) ids
@@ -105,13 +105,12 @@ def _records_as_lists_of_tuples(tuple_or_pickle_file, id_field, time_field,
     of a cycle, based on input of a pickle file containing a dict.
     """
     records = {}
-    if isinstance(tuple_or_pickle_file, tuple):
-        cols_meta, records = tuple_or_pickle_file
+    if isinstance(dict_or_pickle_file, dict):
+        records = dict_or_pickle_file
     else:
         try:
-            with open(tuple_or_pickle_file, 'rb') as cp:
-                cols_meta_and_records = pickle.load(cp)
-                cols_meta, records = cols_meta_and_records
+            with open(dict_or_pickle_file, 'rb') as cp:
+                records = pickle.load(cp)
         except ValueError:
             print('The first argument must be a pickle file or dict.')
     random_record = random_record_from_dict(records, value_only=False)
@@ -131,7 +130,7 @@ def _records_as_lists_of_tuples(tuple_or_pickle_file, id_field, time_field,
     elif data_type == 'time_stamp':
         multi_ids, vals = _cycles_multi_ids(records, id_field, time_field,
                                             strptime_format=strptime_format)
-    return (multi_ids, vals)
+    return multi_ids, vals
 
 
 def random_record_from_dict(records, value_only=False):

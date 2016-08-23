@@ -85,13 +85,27 @@ def state_fixture():
                            (TEST_OUTSIDE_FILE, None, None, None,
                            None, 'outside')])
 def test_select_clean_auto(data_file, states, thermostats, postal, cycle, auto):
-    col_meta, clean_dict = ct.dict_from_file(data_file, cycle=cycle, states=states,
+    clean_dict = ct.dict_from_file(data_file, cycle=cycle, states=states,
                                    thermostats_file=thermostats,
                                    postal_file=postal, auto=auto)
     assert isinstance(clean_dict, dict)
-    assert isinstance(col_meta, dict)
     assert len(clean_dict) > 0
 
+
+@pytest.mark.parametrize("data_file, states, thermostats, postal, cycle, auto",
+                         [(TEST_CYCLES_FILE, None, None, None, CYCLE_TYPE_COOL,
+                           'cycles'),
+                          (TEST_INSIDE_FILE, None, None, None, CYCLE_TYPE_COOL,
+                           'inside'),
+                          (TEST_OUTSIDE_FILE, None, None, None,
+                           None, 'outside')])
+def test_col_meta_auto(data_file, states, thermostats, postal, cycle, auto):
+    col_meta = ct.dict_from_file(data_file, cycle=cycle, states=states,
+                                 thermostats_file=thermostats,
+                                 postal_file=postal, auto=auto, meta=True)
+    assert isinstance(col_meta, dict)
+    print(col_meta)
+    assert len(col_meta) > 0
 
 
 @pytest.mark.parametrize("data_file, states, thermostats, postal, cycle, auto",
@@ -106,13 +120,11 @@ def test_select_clean_auto(data_file, states, thermostats, postal, cycle, auto):
                           (TEST_OUTSIDE_FILE, None, None, None,
                            CYCLE_TYPE_COOL, None)])
 def test_select_clean(data_file, states, thermostats, postal, cycle, auto):
-    col_meta, clean_dict = ct.dict_from_file(data_file, cycle=cycle, states=states,
-                                             thermostats_file=thermostats,
-                                             postal_file=postal, auto=auto)
+    clean_dict = ct.dict_from_file(data_file, cycle=cycle, states=states,
+                                   thermostats_file=thermostats,
+                                   postal_file=postal, auto=auto)
     assert isinstance(clean_dict, dict)
-    assert isinstance(col_meta, dict)
     assert len(clean_dict) > 0
-
 
 
 @pytest.mark.parametrize("tempdir, data_file, cycle, states_to_clean, "
@@ -175,18 +187,16 @@ def test_pickle_cycles_inside_outside(tempdir, data_file, cycle, states_to_clean
                           (TEST_OUTSIDE_FILE, None, None, None,
                            None, 'outside', hi.create_outside_df, None, None)])
 def test_df_creation_after_dict(data_file, states, thermostats, postal, cycle, auto, df_creation_func, id_type, ids):
-    cols_meta_and_clean_dict = ct.dict_from_file(data_file, cycle=cycle, states=states,
+    clean_dict = ct.dict_from_file(data_file, cycle=cycle, states=states,
                                    thermostats_file=thermostats, postal_file=postal,
                                    auto=auto)
-    cols_meta, clean_dict = cols_meta_and_clean_dict
     assert isinstance(clean_dict, dict)
-    assert isinstance(cols_meta, dict)
     assert len(clean_dict) > 0
 
     kwargs = {}
     if id_type is not None:
         kwargs[id_type] = ids
-    df = df_creation_func(cols_meta_and_clean_dict, **kwargs)
+    df = df_creation_func(clean_dict, **kwargs)
     assert isinstance(df, pd.DataFrame)
 
 
@@ -207,17 +217,15 @@ def test_df_creation_after_dict(data_file, states, thermostats, postal, cycle, a
                               (TEST_OUTSIDE_FILE, None, None, None,
                                None, hi.create_outside_df, None, None)])
 def test_df_creation_after_fixed_dict(data_file, states, thermostats, postal, cycle, df_creation_func, id_type, ids):
-    cols_meta_and_clean_dict = ct.dict_from_file(data_file, cycle=cycle, states=states,
-                                                 thermostats_file=thermostats, postal_file=postal)
-    cols_meta, clean_dict = cols_meta_and_clean_dict
+    clean_dict = ct.dict_from_file(data_file, cycle=cycle, states=states,
+                                   thermostats_file=thermostats, postal_file=postal)
     assert isinstance(clean_dict, dict)
-    assert isinstance(cols_meta, dict)
     assert len(clean_dict) > 0
 
     kwargs = {}
     if id_type is not None:
         kwargs[id_type] = ids
-    df = df_creation_func(cols_meta_and_clean_dict, **kwargs)
+    df = df_creation_func(clean_dict, **kwargs)
     assert isinstance(df, pd.DataFrame)
 
 # @slow

@@ -31,7 +31,7 @@ Outside = namedtuple('Outside', ['location_id', 'log_date'])
 
 def dict_from_file(raw_file, cycle=None, states=None,
                    thermostats_file=None, postal_file=None, auto=None,
-                   encoding='UTF-8', delimiter=None, quote=None):
+                   encoding='UTF-8', delimiter=None, quote=None, meta=False):
     """Read delimited text file and create dict of records. The keys are named
     2-tuples containing numeric IDs and time stamps.
 
@@ -88,13 +88,21 @@ def dict_from_file(raw_file, cycle=None, states=None,
 
         quote (Optional[str]): Characters surrounding data fields. Default is none, but double and single quotes surrounding data fields are automatically detected and removed if they are present in the data rows. If any other character is specified in the keyword argument, and it surrounds data in any column, it will be removed instead.
 
+        meta (Optional[bool]): An alternative way to return metadata about columns, besides the detect_columns() function. To use it, meta must be True, and a dict of metadata will be returned instead of a dict of records.
+
     Returns:
         clean_dict (dict): Dict.
    """
 
     kwargs = {'states': states, 'thermostats_file': thermostats_file,
               'cycle': cycle, 'postal_file': postal_file, 'auto': auto,
-              'delimiter': delimiter, 'quote': quote}
+              'delimiter': delimiter, 'quote': quote, 'meta': meta}
+
+    if isinstance(meta, bool):
+        pass
+    else:
+        raise ValueError('meta argument must be either False or True.')
+
     if states:
         try:
             assert kwargs.get('thermostats_file'), kwargs.get('postal_file')
@@ -121,15 +129,36 @@ def dict_from_file(raw_file, cycle=None, states=None,
                                       encoding=encoding)
         kwargs['cycle_col'] = cycle_col
 
-    cols_meta, clean_dict = _dict_from_lines_of_text(raw_file, **kwargs)
+    records_or_meta = _dict_from_lines_of_text(raw_file, **kwargs)
 
-    return cols_meta, clean_dict
+    return records_or_meta
+
+
+def detect_columns(raw_file, cycle=None, states=None,
+                   thermostats_file=None, postal_file=None, auto=None,
+                   encoding='UTF-8', delimiter=None, quote=None):
+    """Returns dict with columns that will be in dict based on dict_from_file() or pickle_from_file() and corresponding keyword arguments ('auto' is required, and must be a value other than None).
+
+     See the documentation for dict_from_file() for the complete list of keyword arguments.
+
+    Returns:
+        column_dict (dict): Dict in which keys are one of: 'id_col', 'start_time_col', 'end_time_col', 'cycle_col', (the latter three are for cycles data only), 'time_col', or the labels of other columns found in the file. The values are dicts.
+    """
+    kwargs = {k: v for k, v in [('meta', True), ('cycle', cycle), ('states', states),
+              ('thermostats_file', thermostats_file),
+              ('postal_file', postal_file), ('auto', auto),
+              ('encoding', encoding), ('delimiter', delimiter),
+              ('quote', quote)]}
+
+    col_meta = dict_from_file(raw_file, **kwargs)
+
+    return col_meta
 
 
 def pickle_from_file(raw_file, picklepath=None, cycle=None, states=None,
                      thermostats_file=None, postal_file=None, auto=None,
-                     encoding='UTF-8', delimiter=None, quote=None):
-    """Read delimited text file and create binary pickle file containing tuple with a dict of column meta-data, and a dict of records. The keys are named tuples containing numeric IDs (strings) and time stamps.
+                     encoding='UTF-8', delimiter=None, quote=None, meta=False):
+    """Read delimited text file and create binary pickle file containing a dict of records. The keys are named tuples containing numeric IDs (strings) and time stamps.
 
     See the example .csv data files at https://github.com/nickpowersys/caar.
 
@@ -186,6 +215,8 @@ def pickle_from_file(raw_file, picklepath=None, cycle=None, states=None,
 
         quote (Optional[str]): Characters surrounding data fields. Default is none, but double and single quotes surrounding data fields are automatically detected and removed if they are present in the data rows. If any other character is specified in the keyword argument, and it surrounds data in any column, it will be removed instead.
 
+        meta (Optional[bool]): An alternative way to store metadata about columns, besides the detect_columns() function. To use it, meta must be True, and a dict of metadata will be created instead of a dict of records.
+
     Returns:
         picklepath (str): Path of output file.
     """
@@ -198,11 +229,10 @@ def pickle_from_file(raw_file, picklepath=None, cycle=None, states=None,
 
     kwargs = {'states': states, 'thermostats_file': thermostats_file,
               'cycle': cycle, 'postal_file': postal_file, 'auto': auto,
-              'encoding': encoding, 'delimiter': delimiter, 'quote': quote}
+              'encoding': encoding, 'delimiter': delimiter, 'quote': quote,
+              'meta': meta}
 
-    cols_meta, clean_dict = dict_from_file(raw_file, **kwargs)
-
-    cols_meta_and_clean_dict = cols_meta, clean_dict
+    records_or_meta = dict_from_file(raw_file, **kwargs)
 
     # Due to testing and the need of temporary directories,
     # need to convert LocalPath to string
@@ -214,7 +244,7 @@ def pickle_from_file(raw_file, picklepath=None, cycle=None, states=None,
         str_picklepath = str(picklepath)
 
     with open(str_picklepath, 'wb') as fout:
-        pickle.dump(cols_meta_and_clean_dict, fout, pickle.HIGHEST_PROTOCOL)
+        pickle.dump(records_or_meta, fout, pickle.HIGHEST_PROTOCOL)
 
     return str_picklepath
 
@@ -272,9 +302,10 @@ def _dict_from_lines_of_text(raw_file, **kwargs):
 
     with open(raw_file, encoding=encoding) as lines_to_clean:
         _ = lines_to_clean.readline()
-        cols_meta, clean_dict = cleaning_function(lines_to_clean, **kwargs)
+    #    cols_meta, clean_dict = cleaning_function(lines_to_clean, **kwargs)
+        records_or_meta = cleaning_function(lines_to_clean, **kwargs)
 
-    return cols_meta, clean_dict
+    return records_or_meta
 
 
 def _clean_cycles_auto_detect(lines, **kwargs):
@@ -283,6 +314,10 @@ def _clean_cycles_auto_detect(lines, **kwargs):
 
     # Get column indexes of time stamps, ids and values within the array
     cols_meta = _detect_all_cycle_data_cols(**kwargs)
+
+    if kwargs.get('meta'):
+        return cols_meta
+
     cols = {col: meta['position'] for col, meta in cols_meta.items()}
 
     thermos_ids = _thermostats_ids_in_states(**kwargs)
@@ -292,7 +327,8 @@ def _clean_cycles_auto_detect(lines, **kwargs):
     clean_kwargs = {'cycle_mode': cycle_mode, 'thermos_ids': thermos_ids,
                     'quote': quote}
     clean_records = _validate_cycle_add_to_dict_auto(*args, **clean_kwargs)
-    return cols_meta, clean_records
+
+    return clean_records
 
 
 def _detect_all_cycle_data_cols(**kwargs):
@@ -370,6 +406,10 @@ def _clean_inside_auto_detect(lines, **kwargs):
     header_len = len(kwargs.get('header'))
     # Get column labels and positions. Detect type of data in each column.
     cols_meta = _detect_all_inside_data_cols(**kwargs)
+
+    if kwargs.get('meta'):
+        return cols_meta
+
     cols = {col: meta['position'] for col, meta in cols_meta.items()}
 
     thermos_ids = _thermostats_ids_in_states(**kwargs)
@@ -381,7 +421,7 @@ def _clean_inside_auto_detect(lines, **kwargs):
 
     clean_records = _validate_inside_add_to_dict_auto(*args, **clean_kwargs)
 
-    return cols_meta, clean_records
+    return clean_records
 
 
 def _detect_all_inside_data_cols(**kwargs):
@@ -440,6 +480,10 @@ def _clean_outside_auto_detect(lines, **kwargs):
     header_len = len(kwargs.get('header'))
     # Get column labels and positions. Detect type of data in each column.
     cols_meta = _detect_all_outside_data_cols(**kwargs)
+
+    if kwargs.get('meta'):
+        return cols_meta
+
     cols = {col: meta['position'] for col, meta in cols_meta.items()}
 
     states_selected = kwargs.get('states')
@@ -456,7 +500,7 @@ def _clean_outside_auto_detect(lines, **kwargs):
 
     clean_records = _validate_outside_add_to_dict_auto(*args, **clean_kwargs)
 
-    return cols_meta, clean_records
+    return clean_records
 
 
 def _detect_all_outside_data_cols(**kwargs):
@@ -925,7 +969,9 @@ def _missing_thermostats_or_postal_error_message():
     print('State(s) specified but thermostats and/or postal codes not '
           'specified.')
 
-## cleanthermo / fixedautohelpers
+
+# cleanthermo / fixedautohelpers
+
 
 def _thermostats_states_df(**kwargs):
     """Returns pandas dataframe with thermostat metadata and location
@@ -1049,7 +1095,9 @@ def _locations_in_states(**kwargs):
                               .astype(np.unicode))
     return location_ids_in_states
 
-## Fixed (static) file format handling
+
+# Fixed (static) file format handling
+
 
 def _data_type_matching_header(header):
     """Returns a string indicating the type of data corresponding to a header
@@ -1098,9 +1146,7 @@ def _clean_cycles(lines, **kwargs):
     else:
         clean_records = _clean_cycles_all_states(lines, **kwargs)
 
-    cols_meta = {}
-
-    return cols_meta, clean_records
+    return clean_records
 
 
 def _clean_inside(lines, **kwargs):
@@ -1128,9 +1174,7 @@ def _clean_inside(lines, **kwargs):
     else:
         clean_records = _clean_inside_all_states(lines, **kwargs)
 
-    cols_meta = {}
-
-    return cols_meta, clean_records
+    return clean_records
 
 
 def _clean_inside_all_states(lines, **kwargs):
@@ -1219,9 +1263,7 @@ def _clean_outside(lines, **kwargs):
     else:
         clean_records = _clean_outside_all_states(lines, **kwargs)
 
-    cols_meta = {}
-
-    return cols_meta, clean_records
+    return clean_records
 
 
 def _clean_outside_all_states(lines, **kwargs):
@@ -1252,7 +1294,6 @@ def _validate_outside_record(record, ids=None):
     yield all(record)
     if ids is not None:
         yield _leading_id(record) in ids
-
 
 
 def _leading_id(record):
