@@ -109,11 +109,11 @@ else:
     TEST_DIR = parser.get('test_files', 'TEST_DIR')
 
 # Ints
-THERMO_ID1 = int(parser.get('test_ids_and_states', 'THERMO_ID1'))
-THERMO_ID2 = int(parser.get('test_ids_and_states', 'THERMO_ID2'))
+THERMO_ID1 = parser.get('test_ids_and_states', 'THERMO_ID1')
+THERMO_ID2 = parser.get('test_ids_and_states', 'THERMO_ID2')
 THERMO_IDS = [THERMO_ID1, THERMO_ID2]
-LOCATION_ID1 = int(parser.get('test_ids_and_states', 'LOCATION_ID1'))
-LOCATION_ID2 = int(parser.get('test_ids_and_states', 'LOCATION_ID2'))
+LOCATION_ID1 = parser.get('test_ids_and_states', 'LOCATION_ID1')
+LOCATION_ID2 = parser.get('test_ids_and_states', 'LOCATION_ID2')
 LOCATION_IDS = [LOCATION_ID1, LOCATION_ID2]
 
 # Two-letter abbreviation

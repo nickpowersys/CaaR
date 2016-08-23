@@ -1,9 +1,11 @@
 from __future__ import absolute_import, division, print_function
+
 import click
-import caar.cleanthermostat as ct
+from future import standard_library
+
+import cleanthermostat as ct
 from caar.configparser_read import THERMOSTATS_FILE, POSTAL_FILE
 
-from future import standard_library
 standard_library.install_aliases()
 
 
