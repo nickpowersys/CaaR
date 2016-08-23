@@ -44,8 +44,9 @@ def dict_from_file(raw_file, cycle=None, states=None,
     Example outside temperature file column headings LocationId, TimeStamp, Degrees.
 
     Common delimited text file formats including commas, tabs, pipes and spaces are detected in
-    that order within the first row and the first delimiter detected is used. In all cases, rows
-    are only used if the number of values match the number of column labels in the first row.
+    that order within the data rows (the header has its own delimiter detection and is handled separately,
+    automatically)  and the first delimiter detected is used. In all cases, rows are only used if the
+    number of values match the number of column labels in the first row.
 
     Each input file is expected to have (at least) columns representing ID's, time stamps (or
     starting and ending time stamps for cycles), and (if not cycles) corresponding observations.
@@ -82,6 +83,10 @@ def dict_from_file(raw_file, cycle=None, states=None,
         auto (Optional[Boolean]): {'cycles', 'inside', 'outside', None} If one of the data types is specified, the function will detect which columns contain IDs, time stamps and values of interest automatically. If None (default), the order of columns in the delimited file and the config.ini file should match.
 
         encoding (Optional[str]): Encoding of the raw data file. Default: 'UTF-8'.
+
+        delimiter (Optional[str]): Character to be used as row delimiter. Default is None, but commas, tabs, pipes and spaces are automatically detected in that priority order) if no delimiter is specified.
+
+        quote (Optional[str]): Characters surrounding data fields. Default is none, but double and single quotes surrounding data fields are automatically detected and removed if they are present in the data rows. If any other character is specified in the keyword argument, and it surrounds data in any column, it will be removed instead.
 
     Returns:
         clean_dict (dict): Dict.
@@ -137,7 +142,8 @@ def pickle_from_file(raw_file, picklepath=None, cycle=None, states=None,
     Example outside temperature file column headings LocationId, TimeStamp, Degrees.
 
     Common delimited text file formats including commas, tabs, pipes and spaces are detected in
-    that order within the first row and the first delimiter detected is used. In all cases, rows
+    that order within the data rows (the header has its own delimiter detection and is handled separately,
+    automatically) and the first delimiter detected is used. In all cases, rows
     are only used if the number of values match the number of column labels in the first row.
 
     Each input file is expected to have (at least) columns representing ID's, time stamps (or
@@ -177,6 +183,10 @@ def pickle_from_file(raw_file, picklepath=None, cycle=None, states=None,
         auto (Optional[Boolean]): {'cycles', 'inside', 'outside', None} If one of the data types is specified, the function will detect which columns contain IDs, time stamps and values of interest automatically. If None (default), the order and labels of columns in the delimited text file and the config.ini file should match.
 
         encoding (Optional[str]): Encoding of the raw data file. Default: 'UTF-8'.
+
+        delimiter (Optional[str]): Character to be used as row delimiter. Default is None, but commas, tabs, pipes and spaces are automatically detected in that priority order) if no delimiter is specified.
+
+        quote (Optional[str]): Characters surrounding data fields. Default is none, but double and single quotes surrounding data fields are automatically detected and removed if they are present in the data rows. If any other character is specified in the keyword argument, and it surrounds data in any column, it will be removed instead.
 
     Returns:
         picklepath (str): Path of output file.
