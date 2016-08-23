@@ -31,6 +31,8 @@ def create_inside_df(tuple_or_pickle_file, thermo_ids=None,
 
         thermo_ids (Optional[list or other iterable of ints]): Thermostat IDs. If no argument is specified, all IDs from the first arg will be in the DataFrame.
 
+        strptime_format (Optional[str]): This argument should only be needed if the time stamp format is unusual, and is not able to be inferred by the dateutil library by way of pandas.
+
     Returns:
         inside_df (pandas DataFrame): DataFrame has MultiIndex based on the
         ID(s) and timestamps.
@@ -54,6 +56,8 @@ def create_cycles_df(tuple_or_pickle_file, thermo_ids=None, strptime_format=None
 
         thermo_ids (Optional[list or other iterable of ints]): Thermostat IDs. If no  argument is specified, all IDs from the first arg will be in the DataFrame.
 
+        strptime_format (Optional[str]): This argument should only be needed if the time stamp format is unusual, and is not able to be inferred by the dateutil library by way of pandas.
+
     Returns:
         cycles_df (pandas DataFrame): DataFrame has MultiIndex based on the ID(s) and timestamps.
     """
@@ -76,6 +80,8 @@ def create_outside_df(tuple_or_pickle_file, location_ids=None,
         tuple_or_pickle_file (tuple or str): Must have been created with dict_from_file() or pickle_from_file() function.
 
         location_ids (Optional[list or other iterable of ints]): Location IDs. If no argument is specified, all IDs from the first arg will be in the DataFrame.
+
+        strptime_format (Optional[str]): This argument should only be needed if the time stamp format is unusual, and is not able to be inferred by the dateutil library by way of pandas.
 
     Returns:
         outside_df (pandas DataFrame): DataFrame has MultiIndex based on the ID(s) and timestamps.
