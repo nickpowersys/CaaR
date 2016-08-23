@@ -129,9 +129,7 @@ def dict_from_file(raw_file, cycle=None, states=None,
 def pickle_from_file(raw_file, picklepath=None, cycle=None, states=None,
                      thermostats_file=None, postal_file=None, auto=None,
                      encoding='UTF-8', delimiter=None, quote=None):
-    """Read delimited text file and create binary pickle file containing tuple with a dict
-     of column meta-data, and a dict of records. The keys are named tuples containing
-     numeric IDs (strings) and time stamps.
+    """Read delimited text file and create binary pickle file containing tuple with a dict of column meta-data, and a dict of records. The keys are named tuples containing numeric IDs (strings) and time stamps.
 
     See the example .csv data files at https://github.com/nickpowersys/caar.
 
