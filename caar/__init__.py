@@ -1,4 +1,5 @@
 from caar.cleanthermostat import dict_from_file
+from caar.cleanthermostat import detect_columns
 from caar.cleanthermostat import pickle_from_file
 
 from caar.history import create_cycles_df
