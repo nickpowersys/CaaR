@@ -3,13 +3,13 @@ from setuptools import find_packages, setup
 
 setup(
     name='caar',
-    version='2.0.1-beta',
+    version='3.0.0-beta',
     url='http://github.com/nickpowersys/CaaR/',
     license='BSD 3-Clause License',
     author='Nicholas A. Brown',
     author_email='nbprofessional@gmail.com',
-    description='Accelerating analysis of data on temperatures and '
-                'thermostat-driven loads.',
+    description='Accelerating analysis of time stamped sensor observations and '
+                'cycling loads.',
     # install_requires=['numpy>=1.11.1',
     #  'pandas>=0.18.1',
     #  'future',
