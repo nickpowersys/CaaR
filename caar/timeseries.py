@@ -2,14 +2,14 @@ from __future__ import absolute_import, division, print_function
 import datetime as dt
 import numpy as np
 import pandas as pd
-from caar.histsummary import location_id_of_thermo
+from caar.histsummary import location_id_of_thermo, _get_time_level_of_df_multiindex
 
 from future import standard_library
 standard_library.install_aliases()
 
 
-def time_series_cycling_and_temps(thermo_id, start, end, thermostats_file,
-                                  cycles_df, inside_df, outside_df=None,
+def time_series_cycling_and_temps(thermo_id, start, end, cycles_df, inside_df,
+                                  outside_df=None, thermostats_file=None,
                                   freq='1min'):
     """Returns 2-tuple containing NumPy arrays for the specified thermostat as time series, with one record for each interval at the specified frequency ('freq'). For cycle data, ON status is given by 1's, and OFF status is given by 0's. For temperature data, intervals between the intervals with actual observations are filled with numpy.nan.
 
@@ -22,13 +22,13 @@ def time_series_cycling_and_temps(thermo_id, start, end, thermostats_file,
 
         freq (str): Frequency, expressed in forms such as '1min', '30s', '1min30s', etc.
 
-        thermostats_file (str): File path.
-
         cycles_df (pandas DataFrame): Cycles DataFrame from **history** module.
 
         inside_df (pandas DataFrame): Inside DataFrame from **history** module.
 
         outside_df (Optional[pandas DataFrame]): Outside DataFrame from **history** module.
+
+        thermostats_file (Optional[str]): File path. Is only needed if outdoor temperatures are specified.
 
     Returns:
         single_day_cycles_temps (2-tuple of NumPy arrays): The 2-tuple contains
@@ -85,11 +85,12 @@ def on_off_status(df, id, start, end, freq='1min'):
     idx = pd.IndexSlice
     # End should already be late enough that additional Timedelta of 1 unit of
     # frequency is not needed
-    records = df.loc[idx[id, start:end], :]
+    records = df.loc[idx[id, :, start:end], :]
     # Start times of ON cycles
+    time_index = _get_time_level_of_df_multiindex(df)
     raw_record_starts = pd.DatetimeIndex(records
                                          .index
-                                         .get_level_values(1))
+                                         .get_level_values(time_index))
     starts_by_freq = (raw_record_starts
                       .snap(freq=freq)
                       .tolist())
@@ -133,10 +134,14 @@ def temps_arr_by_freq(df, id, start, end, freq='1min', actuals_only=False):
     # Get timestamps and temperatures values from dataframe, according to the
     # specified frequency.
     idx = pd.IndexSlice
-    records = df.loc[idx[id, start:end], :]
+    if len(df.index._levels) == 2:
+        records = df.loc[idx[id, start:end], :]
+    elif len(df.index._levesl) == 3:
+        records = df.loc[idx[id, :, start:end], :]
+    time_index = _get_time_level_of_df_multiindex(df)
     timestamps = pd.DatetimeIndex(records
                                   .index
-                                  .get_level_values(1))
+                                  .get_level_values(time_index))
     timestamps_by_freq = (timestamps
                           .snap(freq=freq)
                           .tolist())
