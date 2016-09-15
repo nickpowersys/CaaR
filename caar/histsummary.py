@@ -189,6 +189,18 @@ def df_select_ids(df, id_or_ids):
 
 
 def df_select_datetime_range(df, start_time, end_time):
+    """Returns pandas DataFrame within a datetime range (slice). If end_time is specified as None, the range will have no upper datetime limit.
+
+    Args:
+        df (pandas DataFrame): DataFrame that has been created by a function in the **history** or **histsummary** modules (it must have a numeric ID as the first or only index column).
+
+        start_time (str or datetime.datetime): Datetime.
+
+        end_time (str or datetime.datetime): Datetime.
+
+    Returns:
+        dt_range_df (pandas DataFrame)
+    """
     min_max_tup = (start_time, end_time)
     dt_range_df = _slice_by_single_index(df, time_index=min_max_tup)
     return dt_range_df
