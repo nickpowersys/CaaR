@@ -30,6 +30,7 @@ CYCLE_FIELDS = tuple([CYCLE_FIELD1, CYCLE_FIELD2, CYCLE_FIELD3, CYCLE_FIELD4,
 CYCLE_START_TIME = parser.get('file_headers', 'CYCLE_START_TIME')
 CYCLE_END_TIME = parser.get('file_headers', 'CYCLE_END_TIME')
 # Ints: 0-based column position within the raw file (left to right)
+CYCLE_ID_INDEX = int(parser.get('file_headers', 'CYCLE_ID_INDEX'))
 CYCLE_TYPE_INDEX = int(parser.get('file_headers', 'CYCLE_TYPE_INDEX'))
 CYCLE_START_INDEX = int(parser.get('file_headers', 'CYCLE_START_INDEX'))
 CYCLE_END_TIME_INDEX = int(parser.get('file_headers', 'CYCLE_END_TIME_INDEX'))
@@ -55,6 +56,7 @@ INSIDE_FIELDS = tuple([INSIDE_FIELD1, INSIDE_FIELD2, INSIDE_FIELD3])
 THERMO_ID_FIELD = INSIDE_FIELDS[int(parser.get('file_headers', 'INSIDE_ID_INDEX'))]
 
 # Ints: 0-based positions of fields in raw file
+INSIDE_ID_INDEX = int(parser.get('file_headers', 'INSIDE_ID_INDEX'))
 INSIDE_LOG_DATE_INDEX = int(parser.get('file_headers', 'INSIDE_LOG_DATE_INDEX'))
 INSIDE_DEGREES_INDEX = int(parser.get('file_headers', 'INSIDE_DEGREES_INDEX'))
 # INSIDE_TEMP_FIELD is the string heading of corresponding field
@@ -72,6 +74,7 @@ OUTSIDE_DEGREES_LABEL = parser.get('file_headers', 'OUTSIDE_DEGREES_LABEL')
 # Column heading that is unique to outside data file
 UNIQUE_OUTSIDE_FIELD = OUTSIDE_FIELDS[int(parser.get('file_headers', 'UNIQUE_OUTSIDE_FIELD_INDEX'))]
 # Ints: 0-based positions of fields in raw files
+OUTSIDE_ID_INDEX = int(parser.get('file_headers', 'OUTSIDE_ID_INDEX'))
 OUTSIDE_LOG_DATE_INDEX = int(parser.get('file_headers', 'OUTSIDE_LOG_DATE_INDEX'))
 OUTSIDE_DEGREES_INDEX = int(parser.get('file_headers', 'OUTSIDE_DEGREES_INDEX'))
 
@@ -109,11 +112,11 @@ else:
     TEST_DIR = parser.get('test_files', 'TEST_DIR')
 
 # Ints
-THERMO_ID1 = parser.get('test_ids_and_states', 'THERMO_ID1')
-THERMO_ID2 = parser.get('test_ids_and_states', 'THERMO_ID2')
+THERMO_ID1 = int(parser.get('test_ids_and_states', 'THERMO_ID1'))
+THERMO_ID2 = int(parser.get('test_ids_and_states', 'THERMO_ID2'))
 THERMO_IDS = [THERMO_ID1, THERMO_ID2]
-LOCATION_ID1 = parser.get('test_ids_and_states', 'LOCATION_ID1')
-LOCATION_ID2 = parser.get('test_ids_and_states', 'LOCATION_ID2')
+LOCATION_ID1 = int(parser.get('test_ids_and_states', 'LOCATION_ID1'))
+LOCATION_ID2 = int(parser.get('test_ids_and_states', 'LOCATION_ID2'))
 LOCATION_IDS = [LOCATION_ID1, LOCATION_ID2]
 
 # Two-letter abbreviation
