@@ -37,12 +37,7 @@ def dict_from_file(raw_file, cycle=None, states=None,
                    thermostats_file=None, postal_file=None, auto=None,
                    id_col_heading=None, cycle_col_heading=None, encoding='UTF-8',
                    delimiter=None, quote=None, cols_to_ignore=None, meta=False):
-    """Read delimited text file and create dict of dicts. One dict within the
-     dict has the key 'cols_meta' and contains metadata. The other has the key
-     'records'. The records keys are named 2-tuples containing numeric IDs and
-     time stamps (and cycle mode if a cycle mode is chosen with the argument
-     'cycle=', for cycling data). The values are either single values (floats,
-     ints or strings) or tuples of these types.
+    """Read delimited text file and create dict of dicts. One dict within the dict has the key 'cols_meta' and contains metadata. The other has the key 'records'. The records keys are named 2-tuples containing numeric IDs and time stamps (and cycle mode if a cycle mode is chosen with the argument 'cycle=', for cycling data). The values are either single values (floats, ints or strings) or tuples of these types.
 
     See the example .csv data files at https://github.com/nickpowersys/caar.
 
