@@ -2,9 +2,8 @@ from __future__ import absolute_import, division, print_function
 import datetime as dt
 import numpy as np
 import pandas as pd
-from caar.configparser_read import OUTSIDE_TIMESTAMP_LABEL,               \
-    CYCLE_START_TIME, CYCLE_END_TIME, THERMO_ID_FIELD, INSIDE_TEMP_FIELD, \
-    THERMOSTAT_DEVICE_ID, THERMOSTAT_LOCATION_ID
+
+from caar.configparser_read import THERMOSTAT_DEVICE_ID, THERMOSTAT_LOCATION_ID
 
 from future import standard_library
 standard_library.install_aliases()
@@ -21,8 +20,10 @@ def days_of_data_by_id(df):
         days_data_df (pandas DataFrame): DataFrame with count
         ('Days') for each ID.
     """
+    time_level = _get_time_level_of_df_multiindex(df)
+
     days_data_df = (df.groupby([df.index.get_level_values(level=0),
-                                pd.TimeGrouper('D', level=1)])
+                                pd.TimeGrouper('D', level=time_level)])
                     .count()
                     .groupby(level=0)
                     .count())
@@ -110,7 +111,7 @@ def daily_cycle_and_temp_obs_counts(id, thermostats_file, cycles_df, inside_df,
         values of 'Cycles_obs', 'Inside_obs', and 'Outside_obs'.
     """
     idx = pd.IndexSlice
-    cycles = cycles_df.loc[idx[id, :], :]
+    cycles = cycles_df.loc[idx[id, :, :], :]
     inside = inside_df.loc[idx[id, :], :]
     outside_data = True if isinstance(outside_df, pd.DataFrame) else False
     if outside_data:
@@ -126,16 +127,19 @@ def daily_cycle_and_temp_obs_counts(id, thermostats_file, cycles_df, inside_df,
                                    for df in dfs)
     else:
         cycles, inside = (df.set_index(df.index.droplevel()) for df in dfs)
-    cycles_inside = pd.merge(cycles, inside, left_index=CYCLE_START_TIME,
+    cycles_time = _get_time_index_column_label(cycles_df)
+    cycles_inside = pd.merge(cycles, inside, left_index=cycles_time,
                              right_index=True, how='inner')
+    cycle_end_time = _get_time_label_of_data(cycles_df)
     if outside_data:
+        outside_time_label = _get_time_index_column_label(outside_df)
         return (pd.merge(cycles_inside, outside, left_index=True,
-                         right_index=OUTSIDE_TIMESTAMP_LABEL)
-                .rename(columns={CYCLE_END_TIME: 'Cycles_obs',
+                         right_index=outside_time_label)
+                .rename(columns={cycle_end_time: 'Cycles_obs',
                                  'Degrees_x': 'Inside_obs',
                                  'Degrees_y': 'Outside_obs'}))
     else:
-        return cycles_inside.rename(columns={CYCLE_END_TIME: 'Cycles_obs',
+        return cycles_inside.rename(columns={cycle_end_time: 'Cycles_obs',
                                              'Degrees': 'Inside_obs'})
 
 
@@ -156,9 +160,13 @@ def daily_data_points_by_id(df, id=None):
     # 2) Gives count of records within groups.
     if id is not None:
         idx = pd.IndexSlice
-        df = df.loc[idx[id, :], :]
+        if _has_double_index(df):
+            df = df.loc[idx[id, :], :]
+        elif _has_triple_index(df):
+            df = df.loc[idx[id, :, :], :]
+    time_index_level = _get_time_level_of_df_multiindex(df)
     daily_df = (df.groupby([df.index.get_level_values(level=0),
-                            pd.TimeGrouper('D', level=1)])
+                            pd.TimeGrouper('D', level=time_index_level)])
                 .count())
     return daily_df
 
@@ -175,18 +183,172 @@ def df_select_ids(df, id_or_ids):
     Returns:
         daily_obs (pandas DataFrame)
     """
-    idx = pd.IndexSlice
-    if isinstance(id_or_ids, tuple):
-        min_id, max_id = id_or_ids[0], id_or_ids[1]
-        if len(df.columns) > 1:
-            return pd.DataFrame(df.loc[idx[min_id:max_id+1, :], :])
-        else:
-            return pd.DataFrame(df.loc[idx[min_id:max_id+1], :])
+    select_id_df = _slice_by_single_index(df, id_index=id_or_ids)
+
+    return select_id_df
+
+
+def df_select_datetime_range(df, start_time, end_time):
+    min_max_tup = (start_time, end_time)
+    dt_range_df = _slice_by_single_index(df, time_index=min_max_tup)
+    return dt_range_df
+
+
+def _slice_by_single_index(df, id_index=None, middle_index=None, time_index=None):
+    slice_kwargs = {'id_index': id_index, 'time_index': time_index}
+
+    if _has_single_index(df):
+        sliced_df = _slice_by_one_index_in_single_index(df, **slice_kwargs)
+    elif _has_double_index(df):
+        sliced_df = _slice_by_one_index_in_double_index(df, **slice_kwargs)
+    elif _has_triple_index(df):
+        slice_kwargs['middle_index'] = middle_index
+        sliced_df = _slice_by_one_index_in_triple_index(df, **slice_kwargs)
     else:
-        if len(df.columns) > 1:
-            return pd.DataFrame(df.loc[idx[id_or_ids, :], :])
-        else:
-            return pd.DataFrame(df.loc[idx[id_or_ids], :])
+        raise ValueError('Multiindex of DataFrame does not have two or three '
+                         'index columns as expected.')
+    return sliced_df
+
+
+def _has_single_index(df):
+    if len(df.index.names) == 1:
+        return True
+    else:
+        return False
+
+
+def _has_double_index(df):
+    if len(df.index.names) == 2:
+        return True
+    else:
+        return False
+
+
+def _has_triple_index(df):
+    if len(df.index.names) == 3:
+        return True
+    else:
+        return False
+
+
+def _slice_by_one_index_in_triple_index(df, id_index=None, middle_index=None,
+                                        time_index=None):
+    idx = pd.IndexSlice
+    index = [index for index in [id_index, middle_index, time_index] if index]
+
+    if len(index) > 1:
+        raise ValueError('More than one index slice has been chosen. '
+                         'This is not yet supported by this function.')
+
+    if id_index:
+        idx_arg = _slice_by_id_in_triple_index(id_index)
+
+    elif time_index:
+        idx_arg = _slice_by_time_in_triple_index(time_index)
+
+    elif middle_index:
+        idx_arg = idx[:, middle_index, :]
+
+    sliced_by_one = pd.DataFrame(df.loc[idx_arg, :])
+    sliced_by_one.sortlevel(inplace=True, sort_remaining=True)
+
+    return sliced_by_one
+
+
+def _slice_by_id_in_single_index(id_or_ids):
+    idx = pd.IndexSlice
+    if isinstance(id_or_ids, tuple) or isinstance(id_or_ids, list):
+        min_id, max_id = id_or_ids[0], id_or_ids[1]
+        idx_arg = idx[min_id:max_id + 1]
+    else:
+        idx_arg = idx[id_or_ids]
+    return idx_arg
+
+
+def _slice_by_id_in_double_index(id_or_ids):
+    idx = pd.IndexSlice
+    if isinstance(id_or_ids, tuple) or isinstance(id_or_ids, list):
+        min_id, max_id = id_or_ids[0], id_or_ids[1]
+        idx_arg = idx[min_id:max_id + 1, :]
+    else:
+        idx_arg = idx[id_or_ids, :]
+    return idx_arg
+
+
+def _slice_by_id_in_triple_index(id_or_ids):
+    idx = pd.IndexSlice
+    if isinstance(id_or_ids, tuple) or isinstance(id_or_ids, list):
+        min_id, max_id = id_or_ids[0], id_or_ids[1]
+        idx_arg = idx[min_id:max_id + 1, :, :]
+    else:
+        idx_arg = idx[id_or_ids, :, :]
+    return idx_arg
+
+
+def _slice_by_time_in_single_index(time_index):
+    idx = pd.IndexSlice
+    min_time, max_time = time_index[0], time_index[1]
+    if max_time is not None:
+        idx_arg = idx[min_time:max_time]
+    else:
+        idx_arg = idx[min_time:]
+    return idx_arg
+
+
+def _slice_by_time_in_double_index(time_index):
+    idx = pd.IndexSlice
+    min_time, max_time = time_index[0], time_index[1]
+    if max_time is not None:
+        idx_arg = idx[:, min_time:max_time]
+    else:
+        idx_arg = idx[:, min_time:]
+    return idx_arg
+
+
+def _slice_by_time_in_triple_index(time_index):
+    idx = pd.IndexSlice
+    min_time, max_time = time_index[0], time_index[1]
+    if max_time is not None:
+        idx_arg = idx[:, :, min_time:max_time]
+    else:
+        idx_arg = idx[:, :, min_time:]
+    return idx_arg
+
+
+def _slice_by_one_index_in_single_index(df, id_index=None, time_index=None):
+    if id_index:
+        idx_arg = _slice_by_id_in_single_index(id_index)
+    elif time_index:
+        idx_arg = _slice_by_time_in_single_index(time_index)
+    sliced_by_one = pd.DataFrame(df.loc[idx_arg, :])
+    sliced_by_one.sortlevel(inplace=True, sort_remaining=True)
+
+    return sliced_by_one
+
+
+def _slice_by_one_index_in_double_index(df, id_index=None, time_index=None):
+    index = [index for index in [id_index, time_index] if index]
+
+    if len(index) > 1:
+        raise ValueError('More than one index slice has been chosen. '
+                         'This is not yet supported by this function.')
+
+    if id_index:
+        idx_arg = _slice_by_id_in_double_index(id_index)
+
+    elif time_index:
+        idx_arg = _slice_by_time_in_double_index(time_index)
+
+    sliced_by_one = pd.DataFrame(df.loc[idx_arg, :])
+    sliced_by_one.sortlevel(inplace=True, sort_remaining=True)
+
+    return sliced_by_one
+
+
+def _sort_by_timestamps(df):
+    time_label = _get_time_label_of_data(df)
+    df.sort_values(time_label, inplace=True)
+    return df
 
 
 def count_of_data_points_for_each_id(df):
@@ -239,13 +401,48 @@ def location_id_of_thermo(thermo_id, thermostats_file):
     return thermostat_df.loc[idx[thermo_id, THERMOSTAT_LOCATION_ID]]
 
 
+def _get_id_index_column_label(df):
+    return df.index.names[0]
+
+
+def _get_time_index_column_label(df):
+    time_level = _get_time_level_of_df_multiindex(df)
+    return df.index.names[time_level]
+
+
+def _get_time_level_of_df_multiindex(df):
+    for i in range(len(df.index._levels)):
+        if type(df.index._levels[i][0]) == pd.tslib.Timestamp:
+            time_level = i
+    return time_level
+
+
+def _get_time_label_of_data(df):
+    for i in range(len(df.columns)):
+        if type(df.iloc[0, i]) == pd.tslib.Timestamp:
+            return df.columns[i]
+    return None
+
+
+def _get_label_of_first_data_column(df):
+    return df.columns[0]
+
+
+def _get_labels_of_data_columns(df):
+    col_labels = []
+    for col in df.columns:
+        col_labels.append(col)
+    return col_labels
+
+
 def squared_avg_daily_data_points_per_id(df):
     """ Returns DataFrame grouped by the primary id (ThermostatId or
     LocationId) and by day. The value column has the count of data points
     per day.
     """
+    time_index_level = _get_time_level_of_df_multiindex(df)
     grp_daily_by_id = df.groupby([df.index.get_level_values(level=0),
-                                  pd.TimeGrouper('D', level=1)])
+                                  pd.TimeGrouper('D', level=time_index_level)])
     return (grp_daily_by_id
             .count()
             .groupby(level=0)
@@ -298,9 +495,13 @@ def number_of_days(df):
 def start_of_first_full_day_df(cycle_df):
     """"Returns datetime.datetime value of the very beginning of the first
     full day for which data is given in a pandas DataFrame. The DataFrame
-    must have a MultiIndex in which the second level of the index (level=1)
+    must have a MultiIndex in which the time level of the index
     contains timestamps."""
-    earliest_timestamp = cycle_df.index.get_level_values(level=1).min()
+    time_index_level = _get_time_level_of_df_multiindex(df)
+    earliest_timestamp = (cycle_df
+                          .index
+                          .get_level_values(level=time_index_level)
+                          .min())
     earliest_full_day = earliest_timestamp + pd.Timedelta(days=1)
     start_earliest_full_day = dt.datetime(earliest_full_day.year,
                                           earliest_full_day.month,
@@ -310,7 +511,11 @@ def start_of_first_full_day_df(cycle_df):
 
 
 def start_of_last_full_day_df(cycle_df):
-    last_timestamp = cycle_df.index.get_level_values(level=1).max()
+    time_index_level = _get_time_level_of_df_multiindex(df)
+    last_timestamp = (cycle_df
+                      .index
+                      .get_level_values(level=time_index_level)
+                      .max())
     last_full_day = last_timestamp - pd.Timedelta(days=1)
     start_last_full_day = dt.datetime(last_full_day.year, last_full_day.month,
                                       last_full_day.day, hour=0, minute=0)
@@ -336,10 +541,11 @@ def count_inside_temp_by_thermo_id(df):
     """Returns the total number of inside temperature readings for each
     thermostat within the DataFrame.
     """
-
-    count_by_id_sorted = (df.groupby(level=THERMO_ID_FIELD, sort=False)
+    device_id_label = _get_id_index_column_label(df)
+    data_field_labels = _get_labels_of_data_columns(df)
+    count_by_id_sorted = (df.groupby(level=device_id_label, sort=False)
                           .count()
-                          .sort_values([INSIDE_TEMP_FIELD], inplace=True,
+                          .sort_values(data_field_labels, inplace=True,
                                        ascending=False))
     count_by_id_arr = np.zeros((len(count_by_id_sorted), 2), dtype=np.uint32)
     for i, row in enumerate(count_by_id_sorted.iterrows()):
@@ -363,9 +569,11 @@ def count_inside_temps_in_intervals_for_thermo_id(df, id, interval='D'):
         and the count of observations by interval.
     """
     idx = pd.IndexSlice
-    count_temps_per_day = (df.loc[idx[id, :], [INSIDE_TEMP_FIELD]]
-                           .reset_index(level=THERMO_ID_FIELD)
-                           .groupby(THERMO_ID_FIELD)
+    first_data_field_label = _get_label_of_first_data_column(df)
+    id_field_label = _get_id_index_column_label(df)
+    count_temps_per_day = (df.loc[idx[id, :], [first_data_field_label]]
+                           .reset_index(level=id_field_label)
+                           .groupby(id_field_label)
                            .resample(interval)
                            .count())
     return count_temps_per_day
