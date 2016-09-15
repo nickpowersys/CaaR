@@ -1,103 +1,89 @@
 from __future__ import absolute_import, division, print_function
 
-import datetime as dt
 import pickle
 import random
 from collections import namedtuple
 
 import pandas as pd
 
-from caar.configparser_read import INSIDE_DEVICE_ID,                         \
-    INSIDE_LOG_DATE, INSIDE_DEGREES, CYCLE_DEVICE_ID, CYCLE_START_TIME,      \
-    CYCLE_END_TIME, OUTSIDE_LOCATION_ID, OUTSIDE_LOG_DATE, OUTSIDE_DEGREES
+from caar.cleanthermostat import _sort_meta_in_col_order
 
 from future import standard_library
 standard_library.install_aliases()
 
 
 Cycle = namedtuple('Cycle', ['thermo_id', 'cycle_mode', 'start_time'])
-Inside = namedtuple('Inside', ['thermo_id', 'log_date'])
-Outside = namedtuple('Outside', ['location_id', 'log_date'])
+Inside = namedtuple('Inside', ['thermo_id', 'timestamp'])
+Outside = namedtuple('Outside', ['location_id', 'timestamp'])
 
 
-def create_inside_df(dict_or_pickle_file, thermo_ids=None,
-                     strptime_format=None):
+def create_inside_df(dict_or_pickle_file, thermo_ids=None):
     """Returns pandas DataFrame containing thermostat ID, timestamps and
     inside temperatures at the time of cooling (or heating) cycles starting
     and ending.
 
     Args:
-        tuple_or_pickle_file (tuple or str): The object must have been created with dict_from_file() or pickle_from_file() function.
+        dict_or_pickle_file (dict or str): The object must have been created with dict_from_file() or pickle_from_file() function.
 
         thermo_ids (Optional[list or other iterable of ints]): Thermostat IDs. If no argument is specified, all IDs from the first arg will be in the DataFrame.
-
-        strptime_format (Optional[str]): This argument should only be needed if the time stamp format is unusual, and is not able to be inferred by the dateutil library by way of pandas.
 
     Returns:
         inside_df (pandas DataFrame): DataFrame has MultiIndex based on the
         ID(s) and timestamps.
     """
-    multi_ids, vals = _records_as_lists_of_tuples(dict_or_pickle_file,
-                                                  'thermo_id', 'log_date',
-                                                  ids=thermo_ids,
-                                                  strptime_format=strptime_format)
-
-    inside_df = _create_multi_index_df([INSIDE_DEVICE_ID, INSIDE_LOG_DATE],
-                                       multi_ids, [INSIDE_DEGREES], vals)
+    fields = list(Inside._fields)
+    multi_ids, vals, meta = _records_as_lists_of_tuples(dict_or_pickle_file,
+                                                        fields, ids=thermo_ids)
+    id_labels = [meta[col]['heading'] for col in ['id', 'time']]
+    data_labels = _data_labels_from_meta(meta, id_labels)
+    inside_df = _create_multi_index_df(id_labels, multi_ids, data_labels, vals)
     return inside_df
 
 
-def create_cycles_df(dict_or_pickle_file, thermo_ids=None, strptime_format=None):
+def create_cycles_df(dict_or_pickle_file, thermo_ids=None):
     """Returns pandas DataFrame containing thermostat ids and cycle beginning
     timestamps as multi-part indexes, and cycle ending times as values.
 
     Args:
-        tuple_or_pickle_file (tuple or str): Must have been created with dict_from_file() or pickle_from_file() function.
+        dict_or_pickle_file (dict or str): Must have been created with dict_from_file() or pickle_from_file() function.
 
         thermo_ids (Optional[list or other iterable of ints]): Thermostat IDs. If no  argument is specified, all IDs from the first arg will be in the DataFrame.
-
-        strptime_format (Optional[str]): This argument should only be needed if the time stamp format is unusual, and is not able to be inferred by the dateutil library by way of pandas.
 
     Returns:
         cycles_df (pandas DataFrame): DataFrame has MultiIndex based on the ID(s) and timestamps.
     """
-
-    multi_ids, vals = _records_as_lists_of_tuples(dict_or_pickle_file,
-                                                  'thermo_id', 'start_time',
-                                                  ids=thermo_ids,
-                                                  strptime_format=strptime_format)
-    cycles_df = _create_multi_index_df([CYCLE_DEVICE_ID, CYCLE_START_TIME],
-                                       multi_ids, [CYCLE_END_TIME], vals)
+    multi_ids, vals, meta = _records_as_lists_of_tuples(dict_or_pickle_file,
+                                                        list(Cycle._fields),
+                                                        ids=thermo_ids)
+    id_labels = [meta[col]['heading'] for col in ['id', 'cycle', 'start_time']]
+    data_labels = _data_labels_from_meta(meta, id_labels)
+    cycles_df = _create_multi_index_df(id_labels, multi_ids, data_labels, vals)
     return cycles_df
 
 
-def create_outside_df(dict_or_pickle_file, location_ids=None,
-                      strptime_format=None):
+def create_outside_df(dict_or_pickle_file, location_ids=None):
     """Returns pandas DataFrame containing records with location IDs and time
     stamps as multi-part indexes and outdoor temperatures as values.
 
     Args:
-        tuple_or_pickle_file (tuple or str): Must have been created with dict_from_file() or pickle_from_file() function.
+        dict_or_pickle_file (dict or str): Must have been created with dict_from_file() or pickle_from_file() function.
 
         location_ids (Optional[list or other iterable of ints]): Location IDs. If no argument is specified, all IDs from the first arg will be in the DataFrame.
-
-        strptime_format (Optional[str]): This argument should only be needed if the time stamp format is unusual, and is not able to be inferred by the dateutil library by way of pandas.
 
     Returns:
         outside_df (pandas DataFrame): DataFrame has MultiIndex based on the ID(s) and timestamps.
     """
-    multi_ids, vals = _records_as_lists_of_tuples(dict_or_pickle_file,
-                                                  'location_id', 'log_date',
-                                                  ids=location_ids,
-                                                  strptime_format=strptime_format)
-    outside_df = _create_multi_index_df([OUTSIDE_LOCATION_ID,
-                                         OUTSIDE_LOG_DATE], multi_ids,
-                                        [OUTSIDE_DEGREES], vals)
+    multi_ids, vals, meta = _records_as_lists_of_tuples(dict_or_pickle_file,
+                                                        list(Outside._fields),
+                                                        ids=location_ids)
+    id_labels = [meta[col]['heading'] for col in ['id', 'time']]
+    data_labels = _data_labels_from_meta(meta, id_labels)
+    outside_df = _create_multi_index_df(id_labels, multi_ids, data_labels, vals)
     return outside_df
 
 
-def _records_as_lists_of_tuples(dict_or_pickle_file, id_field, time_field,
-                                ids=None, strptime_format=None):
+def _records_as_lists_of_tuples(dict_or_pickle_file, fields,
+                                ids=None):
     """Returns tuple containing
     1) a list of named tuples containing thermostat (or outdoor location) ids
     and timestamps and
@@ -106,41 +92,51 @@ def _records_as_lists_of_tuples(dict_or_pickle_file, id_field, time_field,
     """
     records = {}
     if isinstance(dict_or_pickle_file, dict):
-        records = dict_or_pickle_file
+        records = dict_or_pickle_file['records']
+        meta = dict_or_pickle_file['cols_meta']
     else:
         try:
             with open(dict_or_pickle_file, 'rb') as cp:
-                records = pickle.load(cp)
+                container = pickle.load(cp)
+                records = container['records']
+                meta = container['cols_meta']
         except ValueError:
             print('The first argument must be a pickle file or dict.')
-    random_record = random_record_from_dict(records, value_only=False)
-    data_type = _determine_if_temperature_or_time_data(random_record)
     if ids is not None:
         for record_key in list(records.keys()):
             # Discard record if it is not among the desired ids.
-            if getattr(record_key, id_field) not in ids:
+            if getattr(record_key, fields[0]) not in ids:
                 records.pop(record_key, None)
-    multi_ids = []
-    vals = []
-    # inside and outside temperatures have temperature data
-    if data_type == 'temperature':
-        multi_ids, vals = _temps_multi_ids(records, id_field, time_field)
-    # time_stamp data (the data value detected is end time) is associated
-    # with cycling data
-    elif data_type == 'time_stamp':
-        multi_ids, vals = _cycles_multi_ids(records, id_field, time_field,
-                                            strptime_format=strptime_format)
-    return multi_ids, vals
+    multi_ids, vals = _multi_ids_and_data_vals(records, fields)
+    return multi_ids, vals, meta
 
 
-def random_record_from_dict(records, value_only=False):
-    """Returns a randomly chosen key-value pair from a dict."""
+def _data_labels_from_meta(meta, id_labels):
+    sorted_meta = _sort_meta_in_col_order(meta)
+    data_labels = [meta[col]['heading'] for col in
+                   list(sorted_meta)[len(id_labels):]]
+    return data_labels
+
+
+def random_record(dict_or_pickle_file, value_only=False):
+    """Returns a randomly chosen key-value pair from a dict or pickle file."""
+    records = {}
+    if isinstance(dict_or_pickle_file, dict):
+        records = dict_or_pickle_file['records']
+    else:
+        try:
+            with open(dict_or_pickle_file, 'rb') as cp:
+                container = pickle.load(cp)
+                records = container['records']
+        except ValueError:
+            print('The first argument must be a pickle file or dict.')
+
     copied_keys = list(records.keys())
     random_record_key = _random_record_key(copied_keys)
     if value_only:
         return records[random_record_key]
     else:
-        return (random_record_key, records[random_record_key])
+        return random_record_key, records[random_record_key]
 
 
 def _random_record_key(keys):
@@ -152,89 +148,20 @@ def _random_record_key(keys):
         return random_record_key
 
 
-def _determine_if_temperature_or_time_data(record_data):
-    """Returns 'temperature' or 'time_stamp' (a string) based on the content of the
-    value in a named tuple.
-    """
-    if len(record_data[0]) == 3:
-        data_type = 'time_stamp'
-    elif len(record_data[0]) == 2:
-        data_type = 'temperature'
-    else:
-        raise ValueError('The tuple key does not have the expected length.')
-
-    return data_type
-
-
-def _temps_multi_ids(records, id_field, time_field):
+def _multi_ids_and_data_vals(records, fields):
     """Returns tuple containing
-    1) a list of named tuples containing thermostat ids and timestamps and
-    2) a list of either indoor (or outdoor) temperatures, based on items
+    1) a list of named tuples containing ids and timestamps (and cycle modes
+    if applicable) and
+    2) a list of either temperatures or cycle ending times, based on items
     (records) in a dict.
     """
     multi_ids = []
     vals = []
     for k, v in records.items():
-        record_id, time_stamp = [getattr(k, f) for f in [id_field, time_field]]
-        time = _datetime_from_string(time_stamp)
-        if time is None:
-            continue
-        multi_ids.append(tuple([record_id, time]))
-        temperature = int(v)
-        vals.append(temperature)
-    return (multi_ids, vals)
-
-
-def _cycles_multi_ids(records, id_field, time_field, strptime_format=None):
-    """Returns tuple containing
-    1) a list of named tuples containing outdoor location IDs and timestamps
-    and
-    2) a list of ending times of cycles, based on a dict.
-    """
-    multi_ids = []
-    vals = []
-
-    for k, v in records.items():
-        record_id, time_stamp = [getattr(k, f) for f in [id_field, time_field]]
-        time = _datetime_from_string(time_stamp, strptime_format=strptime_format)
-        if time is None:
-            continue
-        multi_ids.append(tuple([record_id, time]))
-        end_time = _datetime_from_string(v[0], strptime_format=strptime_format)
-        vals.append(end_time)
-    return (multi_ids, vals)
-
-
-def _datetime_from_string(time_string, strptime_format=None):
-    if strptime_format:
-        return dt.datetime.strptime(time_string, strptime_format)
-    else:
-        return pd.to_datetime(time_string, infer_datetime_format=True)
-
-
-def _datetime_from_string(time_string, strptime_format=None):
-    if strptime_format:
-        try:
-            time_stamp = pd.to_datetime(time_string, format=strptime_format)
-        except ValueError:
-            return None
-    else:
-        try:
-            time_stamp = pd.to_datetime(time_string, infer_datetime_format=True)
-        except ValueError:
-            return None
-
-    return time_stamp
-
-
-def _validate_time_stamp(time_string):
-    try:
-        kwarg = {'infer_datetime_format': True}
-        assert isinstance(pd.to_datetime(time_string, **kwarg), dt.datetime)
-    except ValueError:
-        return False
-    else:
-        return True
+        ids = tuple(getattr(k, f) for f in fields)
+        multi_ids.append(ids)
+        vals.append(v)
+    return multi_ids, vals
 
 
 def _create_multi_index_df(multiindex_names, multi_ids, column_names, values):
