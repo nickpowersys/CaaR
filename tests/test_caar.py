@@ -12,11 +12,11 @@ from future import standard_library
 import cleanthermostat as ct
 from caar import history as hi
 from caar import timeseries as ts
-from caar.configparser_read import TEST_CYCLES_FILE, CYCLES_PICKLE_FILE_OUT,    \
-    CYCLES_PICKLE_FILE, THERMO_IDS, INSIDE_PICKLE_FILE_OUT, INSIDE_PICKLE_FILE, \
-    OUTSIDE_PICKLE_FILE_OUT, OUTSIDE_PICKLE_FILE, LOCATION_IDS,     \
-    TEST_THERMOSTATS_FILE, STATE, TEST_POSTAL_FILE, CYCLE_TYPE_COOL, \
-    TEST_INSIDE_FILE, TEST_OUTSIDE_FILE, ALL_STATES_CYCLES_PICKLED_OUT, \
+from caar.configparser_read import TEST_CYCLES_FILE, CYCLES_PICKLE_FILE_OUT,   \
+    CYCLES_PICKLE_FILE, THERMO_IDS, INSIDE_PICKLE_FILE_OUT, INSIDE_PICKLE_FILE,\
+    OUTSIDE_PICKLE_FILE_OUT, OUTSIDE_PICKLE_FILE, LOCATION_IDS,                \
+    TEST_THERMOSTATS_FILE, STATE, TEST_POSTAL_FILE, CYCLE_TYPE_COOL,           \
+    TEST_INSIDE_FILE, TEST_OUTSIDE_FILE, ALL_STATES_CYCLES_PICKLED_OUT,        \
     ALL_STATES_INSIDE_PICKLED_OUT, ALL_STATES_OUTSIDE_PICKLED_OUT, THERMO_ID1, \
     LOCATION_ID1
 
@@ -77,8 +77,8 @@ def state_fixture():
                            (TEST_CYCLES_FILE, None, None, None, CYCLE_TYPE_COOL,
                            'cycles'),
                            (TEST_INSIDE_FILE, STATE, TEST_THERMOSTATS_FILE,
-                           TEST_POSTAL_FILE, CYCLE_TYPE_COOL, 'inside'),
-                           (TEST_INSIDE_FILE, None, None, None, CYCLE_TYPE_COOL,
+                           TEST_POSTAL_FILE, None, 'inside'),
+                           (TEST_INSIDE_FILE, None, None, None, None,
                            'inside'),
                            (TEST_OUTSIDE_FILE, STATE, TEST_THERMOSTATS_FILE,
                            TEST_POSTAL_FILE, None, 'outside'),
@@ -95,7 +95,7 @@ def test_select_clean_auto(data_file, states, thermostats, postal, cycle, auto):
 @pytest.mark.parametrize("data_file, states, thermostats, postal, cycle, auto",
                          [(TEST_CYCLES_FILE, None, None, None, CYCLE_TYPE_COOL,
                            'cycles'),
-                          (TEST_INSIDE_FILE, None, None, None, CYCLE_TYPE_COOL,
+                          (TEST_INSIDE_FILE, None, None, None, None,
                            'inside'),
                           (TEST_OUTSIDE_FILE, None, None, None,
                            None, 'outside')])
@@ -113,12 +113,12 @@ def test_col_meta_auto(data_file, states, thermostats, postal, cycle, auto):
                            TEST_POSTAL_FILE, CYCLE_TYPE_COOL, None),
                           (TEST_CYCLES_FILE, None, None, None, CYCLE_TYPE_COOL, None),
                           (TEST_INSIDE_FILE, STATE, TEST_THERMOSTATS_FILE,
-                           TEST_POSTAL_FILE, CYCLE_TYPE_COOL, None),
-                          (TEST_INSIDE_FILE, None, None, None, CYCLE_TYPE_COOL, None),
+                           TEST_POSTAL_FILE, None, None),
+                          (TEST_INSIDE_FILE, None, None, None, None, None),
                           (TEST_OUTSIDE_FILE, STATE, TEST_THERMOSTATS_FILE,
-                           TEST_POSTAL_FILE, CYCLE_TYPE_COOL, None),
+                           TEST_POSTAL_FILE, None, None),
                           (TEST_OUTSIDE_FILE, None, None, None,
-                           CYCLE_TYPE_COOL, None)])
+                           None, None)])
 def test_select_clean(data_file, states, thermostats, postal, cycle, auto):
     clean_dict = ct.dict_from_file(data_file, cycle=cycle, states=states,
                                    thermostats_file=thermostats,
@@ -177,9 +177,9 @@ def test_pickle_cycles_inside_outside(tempdir, data_file, cycle, states_to_clean
                           (TEST_CYCLES_FILE, None, None, None, CYCLE_TYPE_COOL,
                            'cycles', hi.create_cycles_df, None, None),
                           (TEST_INSIDE_FILE, STATE, TEST_THERMOSTATS_FILE,
-                           TEST_POSTAL_FILE, CYCLE_TYPE_COOL, 'inside', hi.create_inside_df,
+                           TEST_POSTAL_FILE, None, 'inside', hi.create_inside_df,
                            'thermo_ids', [THERMO_ID1]),
-                          (TEST_INSIDE_FILE, None, None, None, CYCLE_TYPE_COOL,
+                          (TEST_INSIDE_FILE, None, None, None, None,
                            'inside', hi.create_inside_df, None, None),
                           (TEST_OUTSIDE_FILE, STATE, TEST_THERMOSTATS_FILE,
                            TEST_POSTAL_FILE, None, 'outside', hi.create_outside_df,
@@ -207,9 +207,9 @@ def test_df_creation_after_dict(data_file, states, thermostats, postal, cycle, a
                               (TEST_CYCLES_FILE, None, None, None, CYCLE_TYPE_COOL,
                                hi.create_cycles_df, None, None),
                               (TEST_INSIDE_FILE, STATE, TEST_THERMOSTATS_FILE,
-                               TEST_POSTAL_FILE, CYCLE_TYPE_COOL, hi.create_inside_df,
+                               TEST_POSTAL_FILE, None, hi.create_inside_df,
                                'thermo_ids', [THERMO_ID1]),
-                              (TEST_INSIDE_FILE, None, None, None, CYCLE_TYPE_COOL,
+                              (TEST_INSIDE_FILE, None, None, None, None,
                                hi.create_inside_df, None, None),
                               (TEST_OUTSIDE_FILE, STATE, TEST_THERMOSTATS_FILE,
                                TEST_POSTAL_FILE, None, hi.create_outside_df,
