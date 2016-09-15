@@ -1,7 +1,8 @@
 from __future__ import absolute_import, division, print_function
 
 from io import open
-from collections import namedtuple
+import csv
+from collections import namedtuple, OrderedDict
 import datetime as dt
 import os.path
 import pickle
@@ -11,29 +12,37 @@ import sys
 import numpy as np
 import pandas as pd
 
+from caar.pandas_tseries_tools import _guess_datetime_format
 
-from caar.configparser_read import INSIDE_FIELDS, CYCLE_FIELDS,                 \
-    OUTSIDE_FIELDS, CYCLE_TYPE_COOL, THERMOSTAT_ZIP_CODE, THERMOSTAT_DEVICE_ID, \
-    POSTAL_FILE_ZIP, POSTAL_TWO_LETTER_STATE, THERMOSTAT_LOCATION_ID,           \
-    THERMO_ID_FIELD, UNIQUE_CYCLE_FIELD_INDEX, UNIQUE_OUTSIDE_FIELD,            \
-    CYCLE_TYPE_INDEX, CYCLE_START_INDEX, CYCLE_END_TIME_INDEX,                  \
-    INSIDE_LOG_DATE_INDEX, INSIDE_DEGREES_INDEX,                                \
-    OUTSIDE_LOG_DATE_INDEX, OUTSIDE_DEGREES_INDEX
+from caar.configparser_read import INSIDE_FIELDS,                             \
+    OUTSIDE_FIELDS, THERMOSTAT_ZIP_CODE, THERMOSTAT_DEVICE_ID,                \
+    POSTAL_FILE_ZIP, POSTAL_TWO_LETTER_STATE, THERMOSTAT_LOCATION_ID,         \
+    THERMO_ID_FIELD, UNIQUE_CYCLE_FIELD_INDEX, UNIQUE_OUTSIDE_FIELD,          \
+    CYCLE_TYPE_INDEX, CYCLE_START_INDEX, CYCLE_END_TIME_INDEX,                \
+    INSIDE_LOG_DATE_INDEX, INSIDE_DEGREES_INDEX, INSIDE_ID_INDEX,             \
+    OUTSIDE_LOG_DATE_INDEX, OUTSIDE_DEGREES_INDEX, CYCLE_FIELDS,              \
+    CYCLE_ID_INDEX, OUTSIDE_ID_INDEX
+
 
 from future import standard_library
 standard_library.install_aliases()
 
 
 Cycle = namedtuple('Cycle', ['thermo_id', 'cycle_mode', 'start_time'])
-Inside = namedtuple('Inside', ['thermo_id', 'log_date'])
-Outside = namedtuple('Outside', ['location_id', 'log_date'])
+Inside = namedtuple('Inside', ['thermo_id', 'timestamp'])
+Outside = namedtuple('Outside', ['location_id', 'timestamp'])
 
 
 def dict_from_file(raw_file, cycle=None, states=None,
                    thermostats_file=None, postal_file=None, auto=None,
-                   encoding='UTF-8', delimiter=None, quote=None, meta=False):
-    """Read delimited text file and create dict of records. The keys are named
-    2-tuples containing numeric IDs and time stamps.
+                   id_col_heading=None, cycle_col_heading=None, encoding='UTF-8',
+                   delimiter=None, quote=None, cols_to_ignore=None, meta=False):
+    """Read delimited text file and create dict of dicts. One dict within the
+     dict has the key 'cols_meta' and contains metadata. The other has the key
+     'records'. The records keys are named 2-tuples containing numeric IDs and
+     time stamps (and cycle mode if a cycle mode is chosen with the argument
+     'cycle=', for cycling data). The values are either single values (floats,
+     ints or strings) or tuples of these types.
 
     See the example .csv data files at https://github.com/nickpowersys/caar.
 
@@ -46,7 +55,7 @@ def dict_from_file(raw_file, cycle=None, states=None,
     Common delimited text file formats including commas, tabs, pipes and spaces are detected in
     that order within the data rows (the header has its own delimiter detection and is handled separately,
     automatically)  and the first delimiter detected is used. In all cases, rows are only used if the
-    number of values match the number of column labels in the first row.
+    number of values match the number of column headings in the first row.
 
     Each input file is expected to have (at least) columns representing ID's, time stamps (or
     starting and ending time stamps for cycles), and (if not cycles) corresponding observations.
@@ -57,7 +66,7 @@ def dict_from_file(raw_file, cycle=None, states=None,
     The ID's should contain both letters and digits in some combination (leading zeroes are also
     allowed in place of letters). Having the string 'id', 'Id' or 'ID' will then cause a column
     to be the ID index within the combined ID-time stamp index for a given input file. If there
-    is no such label, the leftmost column with alphanumeric strings (for example, 'T12' or
+    is no such heading, the leftmost column with alphanumeric strings (for example, 'T12' or
     '0123') will be taken as the ID.
 
     The output can be filtered on records from a state or set of states by specifying a
@@ -82,6 +91,12 @@ def dict_from_file(raw_file, cycle=None, states=None,
 
         auto (Optional[Boolean]): {'cycles', 'inside', 'outside', None} If one of the data types is specified, the function will detect which columns contain IDs, time stamps and values of interest automatically. If None (default), the order of columns in the delimited file and the config.ini file should match.
 
+        id_col_heading (Optional[str]): Indicates the heading in the header for the ID column.
+
+        cycle_col_heading (Optional[str]): Indicates the heading in the header for the cycle mode column.
+
+        cols_to_ignore (Optional[iterable of [str] or [int]]): Column headings or 0-based column indexes that should be left out of the output.
+
         encoding (Optional[str]): Encoding of the raw data file. Default: 'UTF-8'.
 
         delimiter (Optional[str]): Character to be used as row delimiter. Default is None, but commas, tabs, pipes and spaces are automatically detected in that priority order) if no delimiter is specified.
@@ -89,14 +104,15 @@ def dict_from_file(raw_file, cycle=None, states=None,
         quote (Optional[str]): Characters surrounding data fields. Default is none, but double and single quotes surrounding data fields are automatically detected and removed if they are present in the data rows. If any other character is specified in the keyword argument, and it surrounds data in any column, it will be removed instead.
 
         meta (Optional[bool]): An alternative way to return metadata about columns, besides the detect_columns() function. To use it, meta must be True, and a dict of metadata will be returned instead of a dict of records.
-
     Returns:
         clean_dict (dict): Dict.
    """
 
-    kwargs = {'states': states, 'thermostats_file': thermostats_file,
-              'cycle': cycle, 'postal_file': postal_file, 'auto': auto,
-              'delimiter': delimiter, 'quote': quote, 'meta': meta}
+    kwargs = dict([('states', states), ('thermostats_file', thermostats_file),
+                   ('cycle', cycle), ('postal_file', postal_file),
+                   ('auto', auto), ('delimiter', delimiter), ('quote', quote),
+                   ('meta', meta), ('id_col_heading', id_col_heading),
+                   ('encoding', encoding)])
 
     if isinstance(meta, bool):
         pass
@@ -109,55 +125,101 @@ def dict_from_file(raw_file, cycle=None, states=None,
         except ValueError:
             _missing_thermostats_or_postal_error_message()
 
-    with open(raw_file, encoding=encoding) as fin:
-        header = _parse_first_line(fin.readline())
-        kwargs['header'] = header
+    header_kwargs = dict([('encoding', encoding), ('delimiter', delimiter),
+                          ('id_col_heading', id_col_heading), ('quote', quote),
+                          ('auto', auto), ('cycle', cycle)])
+    header, id_index = _header_and_id_col_if_heading_or_preconfig(raw_file,
+                                                                  **header_kwargs)
 
-    sample_kwargs = {'encoding': encoding, 'delimiter': delimiter,
-                     'quote': quote}
-    sample_records, delimiter, quote = _select_sample_records(raw_file, header,
-                                                              **sample_kwargs)
-    kwargs['sample_records'] = sample_records
+    skwargs = dict([('encoding', encoding), ('delimiter', delimiter),
+                    ('quote', quote), ('cycle', cycle),
+                    ('id_col', id_index), ('auto', auto),
+                    ('cols_to_ignore', cols_to_ignore),
+                    ('cycle_col_heading', cycle_col_heading)])
+
     # If delimiter and/or quote were not specified as kwargs,
-    # they will be set by call to _select_sample_records()
-    kwargs['delimiter'] = delimiter
-    kwargs['quote'] = quote
+    # they will be set by call to _analyze_all_columns()
+    cols_meta, delim, quote = _analyze_all_columns(raw_file, header,
+                                                   **skwargs)
+    if meta:
+        return cols_meta
+    else:
+        for k, v in [('cols_meta', cols_meta), ('delimiter', delim),
+                     ('quote', quote), ('header', header)]:
+            kwargs[k] = v
 
-    # Detect cycles column
-    if cycle and kwargs.get('auto') == 'cycles':
-        cycle_col = _detect_cycle_col(raw_file, cycle, delimiter, quote=quote,
-                                      encoding=encoding)
-        kwargs['cycle_col'] = cycle_col
+        records = _dict_from_lines_of_text(raw_file, **kwargs)
 
-    records_or_meta = _dict_from_lines_of_text(raw_file, **kwargs)
+        container = {'cols_meta': cols_meta, 'records': records}
 
-    return records_or_meta
+        return container
 
 
 def detect_columns(raw_file, cycle=None, states=None,
                    thermostats_file=None, postal_file=None, auto=None,
-                   encoding='UTF-8', delimiter=None, quote=None):
+                   encoding='UTF-8', delimiter=None, quote=None,
+                   id_col_heading=None, cycle_col_heading=None,
+                   cols_to_ignore=None):
     """Returns dict with columns that will be in dict based on dict_from_file() or pickle_from_file() and corresponding keyword arguments ('auto' is required, and must be a value other than None).
 
-     See the documentation for dict_from_file() for the complete list of keyword arguments.
+    Args:
+        raw_file (str): The input file.
 
+        cycle (Optional[str]): The type of cycle that will be in the output. For example, two possible values that may be in the data file are 'Cool' and/or 'Heat'.
+
+        states (Optional[str]): One or more comma-separated, two-letter state abbreviations.
+
+        thermostats_file (Optional[str]): Path of metadata file for thermostats. Required if there is a states argument.
+
+        postal_file (Optional[str]): Metadata file for postal codes. Required if there is a states argument.
+
+        auto (Optional[Boolean]): {'cycles', 'inside', 'outside', None} If one of the data types is specified, the function will detect which columns contain IDs, time stamps and values of interest automatically. If None (default), the order of columns in the delimited file and the config.ini file should match.
+
+        id_col_heading (Optional[str]): Indicates the heading in the header for the ID column.
+
+        cycle_col_heading (Optional[str]): Indicates the heading in the header for the cycle column.
+
+        cols_to_ignore (Optional[iterable of [str] or [int]]): Column headings or 0-based column indexes that should be left out of the output.
+
+        encoding (Optional[str]): Encoding of the raw data file. Default: 'UTF-8'.
+
+        delimiter (Optional[str]): Character to be used as row delimiter. Default is None, but commas, tabs, pipes and spaces are automatically detected in that priority order) if no delimiter is specified.
+
+        quote (Optional[str]): Characters surrounding data fields. Default is none, but double and single quotes surrounding data fields are automatically detected and removed if they are present in the data rows. If any other character is specified in the keyword argument, and it surrounds data in any column, it will be removed instead.
     Returns:
-        column_dict (dict): Dict in which keys are one of: 'id_col', 'start_time_col', 'end_time_col', 'cycle_col', (the latter three are for cycles data only), 'time_col', or the labels of other columns found in the file. The values are dicts.
+        column_dict (dict): Dict in which keys are one of: 'id_col', 'start_time_col', 'end_time_col', 'cycle_col', (the latter three are for cycles data only), 'time_col', or the headings of other columns found in the file. The values are dicts.
     """
-    kwargs = {k: v for k, v in [('meta', True), ('cycle', cycle), ('states', states),
-              ('thermostats_file', thermostats_file),
-              ('postal_file', postal_file), ('auto', auto),
-              ('encoding', encoding), ('delimiter', delimiter),
-              ('quote', quote)]}
+    kwargs = dict([('meta', True), ('cycle', cycle), ('states', states),
+                   ('thermostats_file', thermostats_file),
+                   ('postal_file', postal_file), ('auto', auto),
+                   ('encoding', encoding), ('delimiter', delimiter),
+                   ('quote', quote), ('id_col_heading', id_col_heading),
+                   ('cycle_col_heading', cycle_col_heading),
+                   ('cols_to_ignore', cols_to_ignore)])
 
     col_meta = dict_from_file(raw_file, **kwargs)
 
-    return col_meta
+    sorted_meta = _sort_meta_in_col_order(col_meta)
+
+    return sorted_meta
+
+
+def _sort_meta_in_col_order(meta):
+    sorted_meta = OrderedDict()
+
+    for i in range(len(meta)):
+        for k, v in meta.items():
+            if v['position'] == i:
+                sorted_meta[k] = v
+
+    return sorted_meta
 
 
 def pickle_from_file(raw_file, picklepath=None, cycle=None, states=None,
                      thermostats_file=None, postal_file=None, auto=None,
-                     encoding='UTF-8', delimiter=None, quote=None, meta=False):
+                     id_col_heading=None, cycle_col_heading=None,
+                     cols_to_ignore=None, encoding='UTF-8', delimiter=None,
+                     quote=None, meta=False):
     """Read delimited text file and create binary pickle file containing a dict of records. The keys are named tuples containing numeric IDs (strings) and time stamps.
 
     See the example .csv data files at https://github.com/nickpowersys/caar.
@@ -171,7 +233,7 @@ def pickle_from_file(raw_file, picklepath=None, cycle=None, states=None,
     Common delimited text file formats including commas, tabs, pipes and spaces are detected in
     that order within the data rows (the header has its own delimiter detection and is handled separately,
     automatically) and the first delimiter detected is used. In all cases, rows
-    are only used if the number of values match the number of column labels in the first row.
+    are only used if the number of values match the number of column headings in the first row.
 
     Each input file is expected to have (at least) columns representing ID's, time stamps (or
     starting and ending time stamps for cycles), and (if not cycles) corresponding observations.
@@ -182,7 +244,7 @@ def pickle_from_file(raw_file, picklepath=None, cycle=None, states=None,
     The ID's should contain both letters and digits in some combination (leading zeroes are also
     allowed in place of letters). Having the string 'id', 'Id' or 'ID' will then cause a column
     to be the ID index within the combined ID-time stamp index for a given input file. If there
-    is no such label, the leftmost column with alphanumeric strings (for example, 'T12' or
+    is no such heading, the leftmost column with alphanumeric strings (for example, 'T12' or
     '0123') will be taken as the ID.
 
     The output can be filtered on records from a state or set of states by specifying a
@@ -207,7 +269,13 @@ def pickle_from_file(raw_file, picklepath=None, cycle=None, states=None,
 
         postal_file (Optional[str]): Metadata file for postal codes. Required if there is a states argument.
 
-        auto (Optional[Boolean]): {'cycles', 'inside', 'outside', None} If one of the data types is specified, the function will detect which columns contain IDs, time stamps and values of interest automatically. If None (default), the order and labels of columns in the delimited text file and the config.ini file should match.
+        auto (Optional[Boolean]): {'cycles', 'inside', 'outside', None} If one of the data types is specified, the function will detect which columns contain IDs, time stamps and values of interest automatically. If None (default), the order and headings of columns in the delimited text file and the config.ini file should match.
+
+        id_col_heading (Optional[str]): Indicates the heading in the header for the ID column.
+
+        cycle_col_heading (Optional[str]): Indicates the heading in the header for the cycle column.
+
+        cols_to_ignore (Optional[iterable of [str] or [int]]): Column headings or 0-based column indexes that should be left out of the output.
 
         encoding (Optional[str]): Encoding of the raw data file. Default: 'UTF-8'.
 
@@ -227,17 +295,20 @@ def pickle_from_file(raw_file, picklepath=None, cycle=None, states=None,
             _missing_thermostats_or_postal_error_message()
             return 0
 
-    kwargs = {'states': states, 'thermostats_file': thermostats_file,
-              'cycle': cycle, 'postal_file': postal_file, 'auto': auto,
-              'encoding': encoding, 'delimiter': delimiter, 'quote': quote,
-              'meta': meta}
+    kwargs = dict([('states', states), ('thermostats_file', thermostats_file),
+                   ('cycle', cycle), ('postal_file', postal_file),
+                   ('auto', auto), ('id_col_heading', id_col_heading),
+                   ('cycle_col_heading', cycle_col_heading),
+                   ('cols_to_ignore', cols_to_ignore), ('encoding', encoding),
+                   ('delimiter', delimiter), ('quote', quote), ('meta', meta)])
 
     records_or_meta = dict_from_file(raw_file, **kwargs)
 
     # Due to testing and the need of temporary directories,
     # need to convert LocalPath to string
     if picklepath is None:
-        picklepath = _pickle_filename(raw_file, states, auto, encoding)
+        picklepath = _pickle_filename(raw_file, states=states, auto=auto,
+                                      encoding=encoding)
     if '2.7' in sys.version:
         str_picklepath = unicode(picklepath)
     else:
@@ -249,16 +320,19 @@ def pickle_from_file(raw_file, picklepath=None, cycle=None, states=None,
     return str_picklepath
 
 
-def _pickle_filename(text_file, states_to_clean, auto, encoding):
+def _pickle_filename(text_file, states=None, auto=None,
+                     encoding='UTF-8', delimiter=None, quote=None):
     """Automatically generate file name based on state(s) and content.
     Takes a string with two-letter abbreviations for states separated by
     commas. If all states are desired, states_to_clean should be None.
     """
-    with open(text_file, encoding=encoding) as f:
-        header = _parse_first_line(f.readline())
+    header, _ = _header_and_id_col_if_heading_or_preconfig(text_file,
+                                                           encoding=encoding,
+                                                           delimiter=delimiter,
+                                                           quote=quote)
     data_type = auto if auto else _data_type_matching_header(header)
-    if states_to_clean:
-        states = states_to_clean.split(',')
+    if states:
+        states = states.split(',')
     else:
         states = ['all_states']
     if '2.7' in sys.version:
@@ -273,7 +347,7 @@ def _dict_from_lines_of_text(raw_file, **kwargs):
     """Returns a tuple containing a dict of column meta-data and a dict of records
     whose keys and values correspond to 1) indoor temperatures, 2) cooling or heating
     cycling intervals or 3) outdoor temperatures. The keys of headers_functions are
-    tuples containing strings with the column labels (headings) from the raw text files.
+    tuples containing strings with the column headings from the raw text files.
     """
     if kwargs.get('auto'):
         # Detect columns containing ID, cool/heat mode and time automatically
@@ -286,7 +360,7 @@ def _dict_from_lines_of_text(raw_file, **kwargs):
         except ValueError:
             print('The data type ' + data + ' is not recognized')
     else:
-        # Use file definition from config.ini file to specify column labels
+        # Use file definition from config.ini file to specify column headings
         config_cols_func_map = {INSIDE_FIELDS: _clean_inside,
                                 CYCLE_FIELDS: _clean_cycles,
                                 OUTSIDE_FIELDS: _clean_outside}
@@ -297,383 +371,570 @@ def _dict_from_lines_of_text(raw_file, **kwargs):
         except KeyError:
             print('Header not matched with headers in config.ini file.')
 
-    # Open file and skip the header
-    encoding = kwargs.get('encoding')
+    records = cleaning_function(raw_file, **kwargs)
 
-    with open(raw_file, encoding=encoding) as lines_to_clean:
-        _ = lines_to_clean.readline()
-        records_or_meta = cleaning_function(lines_to_clean, **kwargs)
-
-    return records_or_meta
+    return records
 
 
-def _clean_cycles_auto_detect(lines, **kwargs):
-    header, cycle_mode = tuple(kwargs.get(k) for k in ['header', 'cycle'])
-    header_len = len(header)
-
-    # Get column indexes of time stamps, ids and values within the array
-    cols_meta = _detect_all_cycle_data_cols(**kwargs)
-
-    if kwargs.get('meta'):
-        return cols_meta
-
-    cols = {col: meta['position'] for col, meta in cols_meta.items()}
-
+def _clean_cycles_auto_detect(raw_file, **kwargs):
+    args = ['header', 'delimiter', 'cols_meta', 'cycle', 'quote', 'encoding']
+    header, delimiter, cols_meta, cycle_mode, quote, encoding = (kwargs.get(k)
+                                                                 for k in args)
+    clean_args = [raw_file, header, delimiter, cols_meta]
     thermos_ids = _thermostats_ids_in_states(**kwargs)
-    delimiter, quote = tuple(kwargs.get(k) for k in ['delimiter', 'quote'])
-
-    args = [lines, header_len, delimiter, cols]
     clean_kwargs = {'cycle_mode': cycle_mode, 'thermos_ids': thermos_ids,
-                    'quote': quote}
-    clean_records = _validate_cycle_add_to_dict_auto(*args, **clean_kwargs)
-
+                    'quote': quote, 'encoding': encoding}
+    clean_records = _validate_cycle_records_add_to_dict_auto(*clean_args,
+                                                             **clean_kwargs)
     return clean_records
 
 
-def _detect_all_cycle_data_cols(**kwargs):
-    sample_records, cycle_col, header = (kwargs.get(k) for k in
-                                         ['sample_records', 'cycle_col',
-                                          'header'])
-
-    time_stamps = _detect_time_stamps(sample_records)
-    id_other_cols = _detect_id_other_cols(sample_records, header,
-                                          [time_stamps[0], time_stamps[1]],
-                                          cycle_col=cycle_col)
-    cols_meta = _create_col_meta(header, id_other_cols, time_stamps,
-                                 cycle_col=cycle_col)
-
-    return cols_meta
-
-
-def _validate_cycle_add_to_dict_auto(lines, header_len, delimiter, cols,
-                                     cycle_mode=None, thermos_ids=None,
-                                     quote=None):
+def _validate_cycle_records_add_to_dict_auto(raw_file, header, delimiter,
+                                             cols_meta, cycle_mode=None,
+                                             thermos_ids=None,
+                                             quote=None, encoding=None):
     clean_records = {}
+    id_col, start_time_col = (cols_meta[k]['position'] for k in ['id',
+                                                                 'start_time'])
+    id_is_int = _id_is_int(cols_meta)
+    cycle_col = (cols_meta['cycle']['position'] if cols_meta.get('cycle')
+                 else None)
 
-    for line in lines:
-        if _line_contains_digits(line):
-            record = _parse_line(line, delimiter, quote=quote)
-            if len(record) != header_len or not all(record):
-                continue
-        else:
-            continue
+    dt_args = [raw_file, start_time_col, encoding, delimiter, quote, header]
+    datetime_format = _guess_datetime_format_from_first_record(*dt_args)
+    data_cols = _non_index_col_types(cols_meta, dt_format=datetime_format)
 
-        if _validate_cycles_auto_record(record, cols, cycle_mode=cycle_mode,
-                                        ids=thermos_ids):
-            # Cycle named tuple declaration is global, in order to ensure
-            # that named tuples using it can be pickled.
-            # Cycle = namedtuple('Cycle', ['thermo_id', 'cycle_mode',
-            # 'start_time'])
-            multiidcols = Cycle(thermo_id=record[cols['id_col']],
-                                cycle_mode=cycle_mode,
-                                start_time=record[cols['start_time_col']])
-            end_time_and_other_col_vals = _cycle_record_vals_auto(record, cols)
-            clean_records[multiidcols] = end_time_and_other_col_vals
+    with open(raw_file, encoding=encoding) as lines:
+        _ = lines.readline()
 
+        for line in lines:
+            record = _record_from_line(line, delimiter, quote, header)
+            if record and _validate_cycles_auto_record(record, id_col,
+                                                       ids=thermos_ids,
+                                                       cycle_mode=cycle_mode,
+                                                       cycle_col=cycle_col):
+                id_val = _id_val(record, id_col, id_is_int)
+                start_dt = _to_datetime(record[start_time_col],
+                                        dt_format=datetime_format)
+                # Cycle named tuple declaration is global, in order to ensure
+                # that named tuples using it can be pickled.
+                # Cycle = namedtuple('Cycle', ['thermo_id', 'cycle_mode',
+                # 'start_time'])
+                multiidcols = Cycle(thermo_id=id_val, cycle_mode=cycle_mode,
+                                    start_time=start_dt)
+                end_time_and_other_col_vals = _record_vals(record, data_cols)
+                clean_records[multiidcols] = end_time_and_other_col_vals
     return clean_records
 
 
-def _validate_cycles_auto_record(record, cols, cycle_mode=None, ids=None):
+def _guess_datetime_format_from_first_record(raw_file, time_col, encoding,
+                                             delimiter, quote, header):
+    with open(raw_file, encoding=encoding) as lines:
+        _ = lines.readline()
+        for line in lines:
+            record = _record_from_line(line, delimiter, quote, header)
+            if record:
+                time = record[time_col]
+                datetime_format = _guess_datetime_format(time)
+                break
+    return datetime_format
+
+
+def _validate_cycles_auto_record(record, id_col, ids=None, cycle_mode=None,
+                                 cycle_col=None):
     """Validate that record ID is in the set of IDs (if any specified), and
     that the cycle type matches the specified value (if any has been specified).
     """
-    if cols.get('cycle_col'):
-        return all([_validate_cycle_mode(record[cols['cycle_col']], cycle_mode),
-                   _validate_id(record[cols['id_col']], ids)])
-    else:
-        return _validate_id(record[cols['id_col']], ids)
+    return all([_validate_cycle_mode(record[cycle_col], cycle_mode),
+               _validate_id(record[id_col], ids)])
 
 
-def _cycle_record_vals_auto(record, cols):
-    all_cols = set(range(len(record)))
-    id_start_end = [cols.get(k) for k in ['id_col', 'start_time_col',
-                                          'end_time_col']]
-    reserved_cols = set(id_start_end)
-    val_cols = list(all_cols - reserved_cols)
-    end_time_col = [cols.get('end_time_col')]
-
-    if len(val_cols):
-        val_cols = end_time_col + val_cols
-        vals = tuple(record[col] for col in val_cols)
-    else:
-        vals = record[end_time_col]
-
-    return vals
-
-
-def _clean_inside_auto_detect(lines, **kwargs):
-    header_len = len(kwargs.get('header'))
-    # Get column labels and positions. Detect type of data in each column.
-    cols_meta = _detect_all_inside_data_cols(**kwargs)
-
-    if kwargs.get('meta'):
-        return cols_meta
-
-    cols = {col: meta['position'] for col, meta in cols_meta.items()}
-
+def _clean_inside_auto_detect(raw_file, **kwargs):
+    args = ['header', 'delimiter', 'cols_meta', 'quote', 'encoding']
+    header, delimiter, cols_meta, quote, encoding = (kwargs.get(k)
+                                                     for k in args)
+    clean_args = [raw_file, header, delimiter, cols_meta]
     thermos_ids = _thermostats_ids_in_states(**kwargs)
-
-    delimiter, quote = (kwargs.get(k) for k in ['delimiter', 'quote'])
-
-    args = [lines, header_len, delimiter, cols]
-    clean_kwargs = {'thermos_ids': thermos_ids, 'quote': quote}
-
-    clean_records = _validate_inside_add_to_dict_auto(*args, **clean_kwargs)
-
+    clean_kwargs = {'thermos_ids': thermos_ids, 'quote': quote,
+                    'encoding': encoding}
+    clean_records = _validate_inside_add_to_dict_auto(*clean_args,
+                                                      **clean_kwargs)
     return clean_records
 
 
-def _detect_all_inside_data_cols(**kwargs):
-    sample_records, header = (kwargs.get(k) for k in
-                              ['sample_records', 'header'])
-    time_stamps = _detect_time_stamps(sample_records)
-    id_other_cols = _detect_id_other_cols(sample_records, header,
-                                          [time_stamps[0]])
-    cols_meta = _create_col_meta(header, id_other_cols, time_stamps)
-
-    return cols_meta
-
-
-def _validate_inside_add_to_dict_auto(lines, header_len, delimiter, cols,
-                                      thermos_ids=None, quote=None):
+def _validate_inside_add_to_dict_auto(raw_file, header, delimiter, cols_meta,
+                                      thermos_ids=None, quote=None,
+                                      encoding=None):
     clean_records = {}
-    for line in lines:
-        if _line_contains_digits(line):
-            record = _parse_line(line, delimiter, quote=quote)
-            if len(record) != header_len or not all(record):
-                continue
-        else:
-            continue
+    id_col, time_col = (cols_meta[k]['position'] for k in ['id', 'time'])
+    id_is_int = _id_is_int(cols_meta)
 
-        if _validate_inside_auto_record(record, cols, ids=thermos_ids):
-            # Inside named tuple declaration is global, in order to ensure
-            # that named tuples using it can be pickled.
-            # Inside = namedtuple('Inside', ['thermo_id', 'log_date'])
-            multiidcols = Inside(thermo_id=record[cols['id_col']],
-                                 log_date=record[cols['time_col']])
-            temp_and_other_vals = _inside_record_vals_auto(record, cols)
-            clean_records[multiidcols] = temp_and_other_vals
+    dt_args = [raw_file, time_col, encoding, delimiter, quote, header]
+    datetime_format = _guess_datetime_format_from_first_record(*dt_args)
+    data_cols = _non_index_col_types(cols_meta, dt_format=datetime_format)
 
+    with open(raw_file, encoding=encoding) as lines:
+        _ = lines.readline()
+        for line in lines:
+            record = _record_from_line(line, delimiter, quote, header)
+            if record and _validate_inside_auto_record(record, id_col,
+                                                       ids=thermos_ids):
+                # Inside named tuple declaration is global, in order to ensure
+                # that named tuples using it can be pickled.
+                # Inside = namedtuple('Inside', ['thermo_id', 'timestamp'])
+                id_val = _id_val(record, id_col, id_is_int)
+                time = _to_datetime(record[time_col],
+                                    dt_format=datetime_format)
+                multiidcols = Inside(thermo_id=id_val,
+                                     timestamp=time)
+                temp_and_other_vals = _record_vals(record, data_cols)
+                clean_records[multiidcols] = temp_and_other_vals
     return clean_records
 
 
-def _validate_inside_auto_record(record, cols, ids=None):
+def _non_index_col_types(cols_meta, dt_format=None):
+    """Return a list of 2-tuples for non-index data columns.
+    The first element of each tuple is the column index, and the second is
+    a primitive type (int or float), function or None. The primitive type or
+    function will be used to change the types of each data element  (or if
+    None, leave them as strings). The list is sorted ascending in the order
+    of the positions of columns."""
+
+    if format:
+        if '2.7' in sys.version:
+            _to_datetime.func_defaults = (dt_format,)
+        else:
+            _to_datetime.__defaults__ = (dt_format,)
+
+    data_cols = set([meta['position'] for k, meta in cols_meta.items() if
+                    k not in ['id', 'time', 'cycle', 'start_time']])
+    type_map = dict([('ints', int), ('floats', float),
+                     ('time', _to_datetime),
+                     ('numeric_commas', _remove_commas_from_int)])
+    data_cols_types = dict([(meta['position'], type_map[meta['type']])
+                            for meta in cols_meta.values()
+                            if meta['position'] in data_cols and
+                            meta['type'] in type_map])
+    cols_types = []
+    for col in data_cols:
+        if col in data_cols_types:
+            cols_types.append((col, data_cols_types[col]))
+        elif col in data_cols:
+            cols_types.append((col, None))
+    return cols_types
+
+
+def _to_datetime(date_str, dt_format=None):
+    return pd.to_datetime(date_str, format=dt_format).to_datetime()
+
+
+def _remove_commas_from_int(numeric_string):
+    return int(numeric_string.replace(',', ''))
+
+
+def _validate_inside_auto_record(record, id_col, ids=None):
     """Validate that standardized record has expected data content.
     """
-    return _validate_id(record[cols['id_col']], ids)
+    return _validate_id(record[id_col], ids)
 
 
-def _inside_record_vals_auto(record, cols):
-    all_cols = set(range(len(record)))
-    id_start = [cols.get(k) for k in ['id_col', 'time_col']]
-    reserved_cols = set(id_start)
-    val_cols = list(all_cols - reserved_cols)
-    if len(val_cols) > 1:
-        vals = tuple(record[col] for col in val_cols)
-    else:
-        vals = record[val_cols[0]]
-    return vals
-
-
-def _clean_outside_auto_detect(lines, **kwargs):
-    header_len = len(kwargs.get('header'))
-    # Get column labels and positions. Detect type of data in each column.
-    cols_meta = _detect_all_outside_data_cols(**kwargs)
-
-    if kwargs.get('meta'):
-        return cols_meta
-
-    cols = {col: meta['position'] for col, meta in cols_meta.items()}
-
-    states_selected = kwargs.get('states')
-    if states_selected:
-        location_ids = (_locations_in_states(**kwargs)
-                        .ravel()
-                        .astype(np.unicode))
-    else:
-        location_ids = None
-    delimiter, quote = (kwargs.get(k) for k in ['delimiter', 'quote'])
-
-    args = [lines, header_len, delimiter, cols]
-    clean_kwargs = {'location_ids': location_ids, 'quote': quote}
-
-    clean_records = _validate_outside_add_to_dict_auto(*args, **clean_kwargs)
-
+def _clean_outside_auto_detect(raw_file, **kwargs):
+    args = ['header', 'delimiter', 'cols_meta', 'quote', 'encoding']
+    header, delimiter, cols_meta, quote, encoding = (kwargs.get(k)
+                                                     for k in args)
+    location_ids = _locations_in_states(**kwargs)
+    clean_args = [raw_file, header, delimiter, cols_meta]
+    clean_kwargs = {'location_ids': location_ids, 'quote': quote,
+                    'encoding': encoding}
+    clean_records = _validate_outside_add_to_dict_auto(*clean_args,
+                                                       **clean_kwargs)
     return clean_records
 
 
-def _detect_all_outside_data_cols(**kwargs):
-    sample_records, header = tuple(kwargs.get(k) for k in ['sample_records',
-                                                           'header'])
-    time_stamps = _detect_time_stamps(sample_records)
-    id_other_cols = _detect_id_other_cols(sample_records, header, [time_stamps[0]])
-
-    cols_meta = _create_col_meta(header, id_other_cols, time_stamps)
-
-    return cols_meta
-
-
-def _validate_outside_add_to_dict_auto(lines, header_len, delimiter, cols,
-                                       location_ids=None, quote=None):
+def _validate_outside_add_to_dict_auto(raw_file, header, delimiter, cols_meta,
+                                       location_ids=None, quote=None,
+                                       encoding=None):
     clean_records = {}
-    for line in lines:
-        if _line_contains_digits(line):
-            record = _parse_line(line, delimiter, quote=quote)
-            if len(record) != header_len or not all(record):
-                continue
-        else:
-            continue
+    id_col, time_col = (cols_meta[k]['position'] for k in ['id', 'time'])
+    id_is_int = _id_is_int(cols_meta)
 
-        if _validate_outside_auto_record(record, cols, ids=location_ids):
-            # Outside named tuple declared globally to enable pickling.
-            # The following is here for reference.
-            # Outside = namedtuple('Outside', ['location_id', 'log_date'])
-            multiidcols = Outside(location_id=record[cols['id_col']],
-                                  log_date=record[cols['time_col']])
-            vals = _outside_record_vals_auto(record, cols)
-            clean_records[multiidcols] = vals
-        else:
-            continue
+    dt_args = [raw_file, time_col, encoding, delimiter, quote, header]
+    datetime_format = _guess_datetime_format_from_first_record(*dt_args)
+    data_cols = _non_index_col_types(cols_meta, dt_format=datetime_format)
+
+    with open(raw_file, encoding=encoding) as lines:
+        _ = lines.readline()
+        for line in lines:
+            record = _record_from_line(line, delimiter, quote, header)
+            if record and _validate_outside_auto_record(record, id_col,
+                                                        ids=location_ids):
+                # Outside named tuple declared globally to enable pickling.
+                # The following is here for reference.
+                # Outside = namedtuple('Outside', ['location_id', 'timestamp'])
+                id_val = _id_val(record, id_col, id_is_int)
+                time = _to_datetime(record[time_col],
+                                    dt_format=datetime_format)
+                multiidcols = Outside(location_id=id_val,
+                                      timestamp=time)
+                temp_and_other_vals = _record_vals(record, data_cols)
+                clean_records[multiidcols] = temp_and_other_vals
+
     return clean_records
 
 
-def _validate_outside_auto_record(record, cols, ids=None):
+def _validate_outside_auto_record(record, id_col, ids=None):
     """Validate that standardized record has expected data content.
     """
-    return _validate_id(record[cols['id_col']], ids)
+    return _validate_id(record[id_col], ids)
 
 
-def _outside_record_vals_auto(record, cols):
-    all_cols = set(range(len(record)))
-    id_start = [cols.get(k) for k in ['id_col', 'time_col']]
-    reserved_cols = set(id_start)
-    val_cols = list(all_cols - reserved_cols)
-    if len(val_cols) > 1:
-        vals = tuple(record[col] for col in val_cols)
+def _record_vals(record, col_conversions):
+    record_vals = []
+
+    for col, convert_func in col_conversions:
+        if convert_func:
+            record_vals.append(convert_func(record[col]))
+        else:
+            record_vals.append(record[col])
+
+    if len(record_vals) > 1:
+        return tuple(record_vals)
     else:
-        vals = record[val_cols[0]]
-    return vals
+        return record_vals[0]
 
 
-def _select_sample_records(raw_file, header, encoding='UTF-8', delimiter=None,
-                           quote=None):
+def _analyze_all_columns(raw_file, header, encoding='UTF-8', delimiter=None,
+                         quote=None, id_col=None, cycle=None, auto=None,
+                         cols_to_ignore=None, cycle_col_heading=None):
     """Creates NumPy array with first 1,000 lines containing numeric data."""
     with open(raw_file, encoding=encoding) as lines:
         _ = lines.readline()
 
-        for i, line in enumerate(lines):
+        delimiter, quote = _determine_delimiter_and_quote(lines, delimiter,
+                                                          quote, auto=auto)
 
-            if not _line_contains_digits(line):
-                continue
+    cycle_col = _detect_cycle_col(raw_file, header, cycle, delimiter,
+                                  auto=auto, encoding=encoding, quote=quote,
+                                  cycle_col_heading=cycle_col_heading)
 
-            if delimiter is None:
-                delimiter = _determine_delimiter(line)
+    sample_kwargs = {'quote': quote, 'encoding': encoding}
+    timestamp_cols = _detect_time_stamps(raw_file, header, delimiter,
+                                         **sample_kwargs)
+    data_cols = _detect_column_data_types(raw_file, header, timestamp_cols,
+                                          delimiter, cols_to_ignore,
+                                          **sample_kwargs)
+    id_other_cols = _detect_id_other_cols(raw_file, header, timestamp_cols,
+                                          data_cols, id_col=id_col,
+                                          cycle_col=cycle_col,
+                                          delimiter=delimiter,
+                                          encoding=encoding, quote=quote)
+    cols_meta = _create_col_meta(header, id_other_cols, timestamp_cols,
+                                 cols_to_ignore, cycle_col=cycle_col)
+    return cols_meta, delimiter, quote
 
-            if quote is None:
-                quote = _determine_quote(line)
 
-                if delimiter and quote:
-                    break
+def _select_sample_records(raw_file, header, encoding=None, delimiter=None,
+                           quote=None):
+    with open(raw_file, encoding=encoding) as lines:
+        _ = lines.readline()
+        delimiter, quote = _determine_delimiter_and_quote(lines, delimiter,
+                                                          quote)
 
-            if i == 100:
-                break
+    sample_records = []
 
     with open(raw_file, encoding=encoding) as lines:
         _ = lines.readline()
 
-        header_len = len(header)
-
-        sample_records = []
-
         for line in lines:
-            if _line_contains_digits(line):
+            record = _record_from_line(line, delimiter, quote, header)
+            if record:
+                sample_records.append(record)
+            else:
+                continue
 
-                record = _parse_line(line, delimiter, quote=quote)
-
-                if len(record) == header_len and all(record):
-                    sample_records.append(record)
-
-                else:
-                    continue
-
-                if len(sample_records) == 1000:
-                    break
+            if len(sample_records) == 1000:
+                break
 
     sample_record_array = np.array(sample_records)
 
     return sample_record_array, delimiter, quote
 
 
-def _detect_time_stamps(sample_records):
+def _determine_delimiter_and_quote(lines, delimiter, quote, auto=None):
+    for i, line in enumerate(lines):
+        if not _contains_digits(line):
+            continue
+
+        if delimiter is None:
+            delimiter = _determine_delimiter(line, auto=auto)
+
+        if quote is None:
+            quote = _determine_quote(line)
+
+            if delimiter and quote:
+                break
+
+        if i == 100:
+            break
+
+    return delimiter, quote
+
+
+def _record_has_all_expected_columns(record, header):
+    if len(record) == len(header) and all(record):
+        return True
+    else:
+        return False
+
+
+def _detect_time_stamps(raw_file, header, delimiter, cycle_col=None,
+                        quote=None, encoding=None):
     """Return column index of first and (for cycle data) second time stamp."""
     first_time_stamp_col = None
     second_time_stamp_col = None
-    first_record = sample_records[0]
-    for col, val in enumerate(first_record):
-        if ':' in val or '/' in val:
-            if _validate_time_stamp(val):
-                if first_time_stamp_col is None:
-                    first_time_stamp_col = col
-                else:
-                    second_time_stamp_col = col
+    with open(raw_file, encoding=encoding) as f:
+        _ = f.readline()
+
+        for line in f:
+            if _contains_digits(line):
+                record = _parse_line(line, delimiter,
+                                     quote)
+                if _record_has_all_expected_columns(record, header):
                     break
-    return first_time_stamp_col, second_time_stamp_col
+
+    for col, val in enumerate(record):
+        if (any([':' in val, '/' in val, '-' in val]) and
+                _validate_time_stamp(val)):
+                    if first_time_stamp_col is None and col != cycle_col:
+                        first_time_stamp_col = col
+                    elif col != cycle_col:
+                        second_time_stamp_col = col
+                        break
+    return [first_time_stamp_col, second_time_stamp_col]
 
 
-def _detect_id_other_cols(sample_records, header, timestamp_cols, cycle_col=None):
-    id_col = None
-    # Detect ID column based on labels in columns
-    if _header_label_contains_id(header, 0) and _header_label_contains_id(header, 1):
-        id_col = _primary_id_col_from_two_fields(sample_records)
-    elif _header_label_contains_id(header, 0):
-        id_col = 0
+def _detect_column_data_types(raw_file, header, timestamp_cols, delimiter,
+                              cols_to_ignore, quote=None, encoding='UTF-8'):
+    """Returns dict containing lists of column indexes that are not assigned
+    as the ID column, cycle column, or time stamp.
+    """
+    with open(raw_file, encoding=encoding) as lines:
+        _ = lines.readline()
+        columns_to_detect = _non_time_cols(header, timestamp_cols, cols_to_ignore)
 
-    if any([id_col > 1, id_col in timestamp_cols, id_col == cycle_col]):
-        id_col = None
+        grouped = _determine_types_of_non_time_cols(columns_to_detect, lines, delimiter,
+                                                    quote, header)
+    return grouped
 
-    # Determine data type of all columns
-    alphanumeric_cols = []
-    digitonly_cols = []
 
-    max_val, col_with_max_val = 0, None
-    max_std, col_with_max_std = 0, None
-
-    sample_record = sample_records[0, :]
-    for col, val in enumerate(sample_record):
-        val = val.replace(',', '')
-        if col in timestamp_cols or col == cycle_col:
-            continue
-        # Column contains values that are purely numeric
-        elif any([not _detect_if_float(val), len(val) > 1 and
-                 val.startswith('0') and not val.startswith('0.'),
-                  not val.isdigit()]):
-            alphanumeric_cols.append(col)
-        elif val.isdigit():
-            digitonly_cols.append(col)
-
-            col_vals = sample_records[:, col]
-            max_val, col_with_max_val = _compare_col_with_max(col, col_vals,
-                                                              np.amax, max_val,
-                                                              col_with_max_val)
-            max_std, col_with_max_std = _compare_col_with_max(col, col_vals,
-                                                              np.std, max_std,
-                                                              col_with_max_std)
-    # If ID overlapped with cycle or time stamp columns, detect based
-    # on mixed alphanumeric content
-    if id_col is None:
-        id_col = _detect_mixed_alpha_numeric_id_col(alphanumeric_cols, header,
-                                                    sample_records)
-
-    if id_col is None:
-        if max_val > 150:
-            id_col = col_with_max_val
+def _record_from_line(line, delimiter, quote, header):
+    if _contains_digits(line):
+        record = _parse_line(line, delimiter, quote)
+        if _record_has_all_expected_columns(record, header):
+            return record
         else:
-            id_col = col_with_max_std
+            return None
+    else:
+        return None
 
-    return id_col, digitonly_cols, alphanumeric_cols
+
+def _non_time_cols(header, timestamp_cols, cols_to_ignore):
+    time_columns = set(_timestamp_columns(timestamp_cols))
+
+    if cols_to_ignore is None:
+        ignoring = set()
+    elif isinstance(cols_to_ignore[0], int):
+        ignoring = set(cols_to_ignore)
+    elif isinstance(cols_to_ignore[0], str):
+        col_indexes_ignoring = []
+        for heading in cols_to_ignore:
+            col_indexes_ignoring.append(_column_index_of_string(header, heading))
+        ignoring = set(col_indexes_ignoring)
+
+    return set(range(len(header))) - time_columns - ignoring
 
 
-def _detect_if_float(val):
+def _timestamp_columns(timestamp_cols):
+    reserved_columns = [col for col in timestamp_cols if col is not None]
+    return reserved_columns
+
+
+def _determine_types_of_non_time_cols(columns, lines, delimiter, quote, header):
+    """Returns dict with lists as values. The lists contain column indexes
+    that have not been assigned to the ID column, cycle column, or time stamps.
+    """
+    int_records_found = {}
+    possible_zips = {}
+    float_cols = []
+    numeric_containing_commas = []
+    alphanumeric_cols = []
+    alpha_only_cols = []
+    zip_plus_4_cols = []
+    columns_assigned = []
+
+    for i, line in enumerate(lines):
+        record = _record_from_line(line, delimiter, quote, header)
+        if record:
+            for col in columns:
+                if col in columns_assigned:
+                    continue
+                val = record[col]
+                if val[0] == 0 and val[1] != '.':
+                    alphanumeric_cols.append(col)
+                elif ',' in val:
+                    if _numeric_containing_commas(val):
+                        numeric_containing_commas.append(col)
+                    else:
+                        alphanumeric_cols.append(col)
+                elif _has_form_of_5_digit_zip(val):
+                    possible_zips[col] = 1
+                elif _has_form_of_zip_plus_4_code(val):
+                    zip_plus_4_cols.append(val)
+                elif _is_numeric(val):
+                    if _is_float(val):
+                        float_cols.append(col)
+                    else:
+                        int_records_found[col] = 1
+                elif _contains_digits(val):
+                    alphanumeric_cols.append(col)
+                else:
+                    alpha_only_cols.append(col)
+
+                columns_assigned = (float_cols + numeric_containing_commas +
+                                    zip_plus_4_cols + alphanumeric_cols +
+                                    alpha_only_cols)
+
+    for col in int_records_found.keys():
+        if col in possible_zips.keys():
+            possible_zips.pop(col)
+
+    for col in float_cols:
+        if col in int_records_found.keys():
+            int_records_found.pop(col)
+
+    cols_grouped = {group: cols for group, cols
+                    in [('floats', float_cols),
+                        ('ints', list(int_records_found.keys())),
+                        ('numeric_commas', numeric_containing_commas),
+                        ('alphanumeric', alphanumeric_cols),
+                        ('alpha_only', alpha_only_cols),
+                        ('possible_zips', list(possible_zips.keys()))]
+                    if cols}
+
+    return cols_grouped
+
+
+def _is_float(val):
+    try:
+        assert isinstance(int(val), int)
+    except ValueError:
+        try:
+            assert isinstance(float(val), float)
+        except ValueError:
+            return False
+        else:
+            return True
+    else:
+        return False
+
+
+def _has_form_of_5_digit_zip(val):
+    if len(val) == 5 and val.isdigit():
+        return True
+
+
+def _has_form_of_zip_plus_4_code(val):
+    if len(val) == 10 and val[5] == '-' and val.replace('-', '').isdigit():
+        return True
+    else:
+        return False
+
+
+def _detect_id_other_cols(raw_file, header, timestamp_cols,
+                          data_cols, cycle_col=None, id_col=None,
+                          delimiter=None, quote=None, encoding=None):
+    if cycle_col:
+        data_cols['cycle_col'] = cycle_col
+
+    if id_col:
+        data_cols['id_col'] = id_col
+        return data_cols
+
+    elif data_cols.get('alphanumeric') and len(data_cols['alphanumeric']) == 1:
+        data_cols['id_col'] = data_cols['alphanumeric'][0]
+        return data_cols
+
+    else:
+        sample_records = []
+
+        with open(raw_file, encoding=encoding) as lines:
+            _ = lines.readline()
+
+            for i, line in enumerate(lines):
+                record = _record_from_line(line, delimiter, quote, header)
+                if record:
+                    possible_id_col_data = _data_in_possible_id_cols(record,
+                                                                     data_cols)
+                    # possible_id_col_contains 2-tuple in which each part
+                    # contains either a list of ints (data) or None
+                    sample_records.append(possible_id_col_data)
+
+                if i == 1000:
+                    break
+
+        sample_arr = np.array(sample_records)
+
+        possible_id_col_indexes = [data_cols[cols] for cols in ['alphanumeric', 'ints']
+                                   if data_cols.get(cols)]
+
+    # Detect ID column based on headings in columns
+        if (_contains_id_heading(header, 0) and
+                _contains_id_heading(header, 1)):
+            id_col = _primary_id_col_from_two_fields(sample_arr)
+            data_cols['id_col'] = id_col
+
+        elif _contains_id_heading(header, 0):
+            data_cols['id_col'] = 0
+
+        if id_col in [col for col in [timestamp_cols + [cycle_col]] if col is not None]:
+            data_cols['id_col'] = None
+            cols_with_max_val_over_150 = []
+            col_of_max_val, max_val = None, 0
+            col_of_max_std, max_std = None, 0
+
+            for col in possible_id_col_indexes:
+                if np.amax(sample_arr[:, col]) > 150:
+                    cols_with_max_val_over_150.append(col)
+
+                args = [col, sample_arr, np.amax, col_of_max_val, max_val]
+                col_of_max_val, max_val = _compare_with_max(*args)
+
+                args = [col, sample_arr, np.std, col_of_max_std, max_std]
+                col_of_max_std, max_std = _compare_with_max(*args)
+
+            if len(cols_with_max_val_over_150) == 1:
+                id_col = cols_with_max_val_over_150[0]
+            elif len(cols_with_max_val_over_150) > 1:
+                id_col = col_of_max_val
+            else:
+                id_col = col_of_max_std
+
+            data_cols['id_col'] = id_col
+
+    return data_cols
+
+
+def _remove_alphas(val):
+    for char in val:
+        if not char.isdigit():
+            val = val.replace(char, '')
+    if len(val):
+        return val
+    else:
+        return None
+
+
+def _is_numeric(val):
     try:
         assert isinstance(float(val), float)
     except ValueError:
@@ -682,51 +943,57 @@ def _detect_if_float(val):
         return True
 
 
-def _compare_col_with_max(col, column_vals, func, current_max, current_max_col):
-    column_func_result = func(column_vals.astype(np.float))
+def _numeric_containing_commas(val):
+    ones_tens_and_greater = val.split('.')[0]
+    split_by_commas = ones_tens_and_greater.split(',')
+    first_group = split_by_commas[0]
+
+    if len(first_group) > 3 and first_group.isdigit() and first_group[0] != '0':
+        return False
+
+    for group in split_by_commas[1:]:
+        if len(group) == 3 and group.isdigit():
+            continue
+        else:
+            return False
+
+    decimal_part = val.split('.')[-1]
+    if decimal_part.isdigit():
+        return True
+    else:
+        return False
+
+
+def _data_in_possible_id_cols(record, data_cols):
+    if data_cols.get('alphanumeric'):
+        alphanumeric_ints = [int(_remove_alphas(record[col_index])
+                                 for col_index in data_cols['alphanumeric'])]
+    else:
+        alphanumeric_ints = None
+
+    if data_cols.get('ints'):
+        ints = [int(record[col_index]) for col_index in data_cols['ints']]
+    else:
+        ints = None
+
+    return alphanumeric_ints, ints
+
+
+def _compare_with_max(col, sample_records, func, current_max_col, current_max):
+    column_vals = sample_records[:, col]
+    column_func_result = func(column_vals)
     if column_func_result > current_max:
         current_max = column_func_result
         current_max_col = col
 
-    return current_max, current_max_col
-
-
-def _numeric_cols(sample_records):
-
-    numeric_cols = []
-
-    record = sample_records[0]
-    record_as_list = list(record)
-    # Verify the row is a record and not a header
-    for col, val in enumerate(record_as_list):
-        if any([val.startswith('0.'), not (val.startswith('0') and
-                len(val) > 1) and _detect_if_float(val)]):
-            numeric_cols.append(col)
-    return numeric_cols
-
-
-def _time_cols(sample_records):
-
-    time_cols = []
-
-    for record in sample_records:
-        record_as_list = list(record)
-        # Verify the row is a record and not a header
-        if _line_contains_digits(str(record_as_list)):
-            time_col_1, time_col_2 = _detect_time_stamps(sample_records)
-            time_cols.append(time_col_1)
-            if time_col_2 is not None:
-                time_cols.append(time_col_2)
-                if len(time_cols) == 2:
-                    break
-    return time_cols
+    return current_max_col, current_max
 
 
 def _detect_mixed_alpha_numeric_id_col(alphanumeric_cols, header, sample_records):
     id_col = None
 
     for col in alphanumeric_cols:
-        if _header_label_contains_id(header, col):
+        if _contains_id_heading(header, col):
             id_col = col
             break
     if id_col is None:
@@ -735,45 +1002,55 @@ def _detect_mixed_alpha_numeric_id_col(alphanumeric_cols, header, sample_records
     return id_col
 
 
-def _detect_cycle_col(raw_file, cycle_mode, delimiter, quote=None, encoding=None):
-    cycle_col = None
+def _detect_cycle_col(raw_file, header, cycle_mode, delimiter,
+                      auto=None, cycle_col_heading=None, quote=None,
+                      encoding=None):
 
-    with open(raw_file, encoding=encoding) as fin:
-        for i, line in enumerate(fin):
-            if _line_contains_digits(line):
-                for col, val in enumerate(_parse_line(line, delimiter, quote=quote)):
-                    if val == cycle_mode:
-                        cycle_col = col
-                        break
-                    if i == 999:
-                        msg = ('No column found containing value \'' +
-                               cycle_mode + '\'\n in the first 1,000 lines of '
-                                            'the file.')
-                        raise ValueError(msg)
-            if cycle_col:
-                break
-    if cycle_col is None:
-        raise ValueError('No column found containing value ' + cycle_mode)
+    if auto and auto != 'cycles':
+        return None
+
+    if cycle_col_heading:
+
+        with open(raw_file, encoding=encoding) as f:
+            first_line = f.readline()
+
+        delimiter = _determine_delimiter(first_line)
+        quote = _determine_quote(first_line)
+        header = _parse_line(first_line, delimiter, quote)
+
+        cycle_col = _column_index_of_string(header, cycle_col_heading)
+
+    else:
+
+        cycle_col = None
+
+        if cycle_mode:
+            with open(raw_file, encoding=encoding) as lines:
+                _ = lines.readline()
+                cycle_col = _cycle_col_in_records(lines, header, delimiter,
+                                                  cycle_mode, quote=quote)
+            if cycle_col is None:
+                raise ValueError('No column found containing value ' + cycle_mode)
 
     return cycle_col
 
 
-def _detect_cycle_col_in_record(record, cycle_mode, header_len):
+def _cycle_col_in_records(lines, header, delimiter, cycle, quote=None):
     cycle_col = None
-    if cycle_mode in record and len(record) == header_len:
-        for col, val in enumerate(record):
-            if val == cycle_mode:
-                cycle_col = col
-                break
+    for line in lines:
+        record = _record_from_line(line, delimiter, quote, header)
+        if cycle in record:
+            cycle_col = record.index(cycle)
+            break
     if cycle_col is None:
-        raise ValueError('Cycle column containing "' +
-                         cycle_mode + '" not found in file.')
-    else:
-        return cycle_col
+        msg = ('No column found containing value \'' + cycle + '\'\n')
+        raise ValueError(msg)
+
+    return cycle_col
 
 
-def _header_label_contains_id(header, col_index):
-    if 'Id' in header[col_index] or 'ID' in header[col_index]:
+def _contains_id_heading(header, col_index):
+    if 'ID' in header[col_index].upper():
         return True
     else:
         return False
@@ -818,7 +1095,9 @@ def _col_containing_digit_or_digits(record, header_len, alphanumeric_cols):
 
 
 def _validate_cycle_mode(cycle, cycle_mode):
-    if cycle == cycle_mode:
+    if cycle is None:
+        return True
+    elif cycle == cycle_mode:
         return True
     # Cycle mode does not match the mode specified in the kwargs
     else:
@@ -842,78 +1121,305 @@ def _validate_time_stamp(time_string):
         return True
 
 
-def _parse_first_line(line, delimiter=None):
+def _header_and_id_col_if_heading_or_preconfig(raw_file, encoding='UTF-8',
+                                               cycle=None, delimiter=None,
+                                               id_col_heading=None, auto=None,
+                                               quote=None, is_postal_file=None,
+                                               is_thermostats_file=None):
+    id_col_index = None
+
+    with open(raw_file, encoding=encoding) as f:
+        header = f.readline()
+
+    if id_col_heading:
+        kwargs = {'delimiter': delimiter, 'quote': quote}
+        id_col_and_more = _id_col_delim_quote_from_id_heading(header,
+                                                              id_col_heading,
+                                                              **kwargs)
+        id_col_index, delimiter, quote = id_col_and_more
+
+    else:
+        quote = _determine_quote(header, quote=quote)
+        delimiter = _determine_delimiter(header, auto=auto, cycle=cycle,
+                                         id_col_heading=id_col_heading,
+                                         quote=quote)
+    header = _parse_line(header, delimiter, quote)
+
+    if is_postal_file or is_thermostats_file:
+        return header, id_col_index
+
+    if (id_col_heading is None) and (auto is None):
+        id_col_index = _id_col_index_for_preconfig_non_auto_file_format(header)
+
+    return header, id_col_index
+
+
+def _remove_newline_and_any_trailing_delimiter(line, delimiter=None):
+    return line.rstrip(delimiter + '\n')
+
+
+def _id_col_delim_quote_from_id_heading(line, id_col_heading, quote=None,
+                                        delimiter=None):
+    quote = _determine_quote(line, quote=quote)
+
     if delimiter is None:
-        delimiter = _determine_delimiter(line)
+        delimiter = _determine_delimiter(line, id_col_heading=id_col_heading, quote=quote)
 
-    line = line.rstrip(delimiter + '\n')
+    header = _parse_line(line, delimiter, quote)
 
-    quote = _determine_quote(line)
-
-    if quote:
-        line = tuple(_remove_quotes(item, quote) for item in line.split(delimiter))
+    if len(header) < 3:
+        raise ValueError('Only ', len(header), ' columns detected based '
+                                               'on ', delimiter, ' as delimiter.')
     else:
-        line = tuple(line.split(delimiter))
+        col_index = _column_index_of_string(header, id_col_heading)
 
-    return line
+    return col_index, delimiter, quote
 
 
-def _parse_line(line, delimiter, quote=None):
-    """Returns tuple of elements from line in comma-separated text file."""
-    line = line.rstrip('\n')
-
-    if quote:
-        line = tuple(_remove_quotes(item, quote) for item in line.split(delimiter))
+def _column_index_of_string(line, string):
+    if string in line:
+        return line.index(string)
     else:
-        line = tuple(line.split(delimiter))
+        raise NameError('Please check the string argument, ', string, ', '
+                        'it was not found.')
 
-    return line
+
+def _parse_line(line, delimiter, quote):
+    line = _remove_newline_and_any_trailing_delimiter(line, delimiter=delimiter)
+    if _character_found_in_line(line, delimiter):
+        parsed_line = csv.reader([line], delimiter=delimiter, quotechar=quote,
+                                 skipinitialspace=True)
+        return tuple(list(parsed_line)[0])
+    else:
+        msg = 'Delimiter specified, ' + delimiter + ', not found in header.'
+        raise ValueError(msg)
 
 
-def _create_col_meta(header, id_other_cols, time_stamps, cycle_col=None):
+def _id_col_index_for_preconfig_non_auto_file_format(header):
+    config_cols_func_map = {INSIDE_FIELDS: INSIDE_ID_INDEX,
+                            CYCLE_FIELDS: CYCLE_ID_INDEX,
+                            OUTSIDE_FIELDS: OUTSIDE_ID_INDEX}
+    try:
+        id_col_index = config_cols_func_map[header]
+    except KeyError:
+        print('Header not matched in id_col_index with headers in config.ini file.')
+    return id_col_index
+
+
+def _remove_commas_from_numeric_strings(items, delimiter, quote=None):
+    for i, val in enumerate(items):
+        if ',' in val:
+            if _numeric_containing_commas(val):
+                items[i] = val.replace(',', '')
+            elif delimiter == ',' and quote:
+                items[i] = quote + val + quote
+    items = tuple(items)
+    return items
+
+
+def _create_col_meta(header, id_other_cols, time_stamps, cols_to_ignore, cycle_col=None):
+    meta = _col_indexes_and_types_for_meta(id_other_cols, time_stamps,
+                                           header, cols_to_ignore,
+                                           cycle_col=cycle_col)
     cols_meta = {}
-    id_col, digitonly_cols, alphanumeric_cols = id_other_cols
-    # Column attributes: Label, position in header, type of data
-    meta = [('id_col', id_col, 'id')]
-
-    if cycle_col:
-        meta = meta + [('cycle_col', cycle_col, 'ops_time'),
-                       ('start_time_col', time_stamps[0], 'time'),
-                       ('end_time_col', time_stamps[1], 'time')]
-    else:
-        meta.append(('time_col', time_stamps[0], 'time'))
-
-    if digitonly_cols:
-        for d in digitonly_cols:
-            if d != id_col:
-                meta.append((header[d], d, 'digitonly'))
-
-    if alphanumeric_cols:
-        for a in alphanumeric_cols:
-            if a != id_col:
-                meta.append((header[a], a, 'alphanumeric'))
 
     for m in meta:
-        cols_meta[m[0]] = {'label': header[m[1]],
+        cols_meta[m[0]] = {'heading': m[3],
                            'type': m[2], 'position': m[1]}
 
     return cols_meta
 
 
-def _determine_delimiter(line):
-    delimch = None
-    for d in [',', '\t', '|']:
-        delimre = re.compile(d)
-        if bool(delimre.search(line)):
-            delimch = d
-            break
-    return delimch
+def _col_indexes_and_types_for_meta(id_other_cols, time_stamps, header,
+                                    cols_to_ignore, cycle_col=None):
+    """Takes list of tuples containing lists of column indexes and the
+    corresponding type labels."""
+    # For the non-required columns, using heading labels as keys
+    # Records contain: 1) key 2) position  3) type(general), 4) label
+    meta = []
+
+    id_col = id_other_cols['id_col']
+    id_type = _data_type_in_col(id_col, id_other_cols)
+    meta.append(_create_meta_for_col('id', id_col, id_type, header))
+
+    if cycle_col:
+        cycle_type = _data_type_in_col(cycle_col, id_other_cols)
+        meta.append(_create_meta_for_col('cycle', cycle_col, cycle_type, header))
+
+    if time_stamps[1] is not None:
+        meta.append(_create_meta_for_col('start_time', time_stamps[0], 'time', header))
+        meta.append(_create_meta_for_col('end_time', time_stamps[1], 'time', header))
+    else:
+        meta.append(_create_meta_for_col('time', time_stamps[0], 'time', header))
+
+    for col in _non_time_cols(header, time_stamps, cols_to_ignore):
+        if col in [c for c in [id_col, cycle_col] if c is not None]:
+            continue
+        data_cat = _get_data_category_of_column(col, id_other_cols)
+        meta.append(_create_meta_for_col(header[col], col, data_cat, header))
+
+    return meta
 
 
-def _determine_quote(line):
+def _data_type_in_col(col_index, id_other_cols):
+    for data_type, meta in id_other_cols.items():
+        if isinstance(meta, list) and col_index in meta:
+            return data_type
+
+
+def _create_meta_for_col(key, position_in_header, data_category, header):
+    return key, position_in_header, data_category, header[position_in_header]
+
+
+def _get_data_category_of_column(col, id_other_cols):
+    for k, v in id_other_cols.items():
+        if isinstance(v, list) and col in v:
+            return k
+
+
+def _determine_delimiter(line, id_col_heading=None, cycle=None, auto=None, quote=None, header=None):
+    quote = _determine_quote(line, quote=quote)
+
+    comma_possible_delimiter = False
+    non_comma_delimiters = []
+
+    delim_kwargs = {'header': header, 'auto': auto, 'cycle': cycle,
+                    'id_col_heading': id_col_heading}
+    if _delimiter_gives_minimum_number_of_columns(line, ',', quote,
+                                                  **delim_kwargs):
+        comma_possible_delimiter = True
+
+    for d in ['\t', '|']:
+        if _delimiter_gives_minimum_number_of_columns(line, d, quote,
+                                                      **delim_kwargs):
+            non_comma_delimiters.append(d)
+
+    if not any([comma_possible_delimiter, non_comma_delimiters]):
+        if _delimiter_gives_minimum_number_of_columns(line, ' ', quote,
+                                                      **delim_kwargs):
+            non_comma_delimiters.append(' ')
+
+    return _only_possible_delimiter_or_raise_error(comma_possible_delimiter,
+                                                   non_comma_delimiters)
+
+
+def _only_possible_delimiter_or_raise_error(comma_possible, non_comma_possible):
+    delims = [(',', 'Commas'), ('\t', 'Tabs'), ('|', 'Pipes'), (' ', 'Spaces')]
+    if comma_possible:
+        if non_comma_possible:
+            delimiter_chars = [','] + non_comma_possible
+            delimiters = {d: desc for d, desc in delims if d in delimiter_chars}
+            _multiple_possible_delimiters(delimiters)
+        else:
+            return ','
+    else:
+        if len(non_comma_possible) > 1:
+            delimiters = {d: desc for d, desc in delims if d in non_comma_possible}
+            _multiple_possible_delimiters(delimiters)
+        elif len(non_comma_possible) == 1:
+            return non_comma_possible[0]
+        else:
+            raise ValueError('Header does not appear to have commas (\',\'), '
+                             'tabs (\'\t\'), pipes (\'|\') or spaces (\' \') '
+                             'as delimiters. Please specify.')
+
+
+def _multiple_possible_delimiters(delimiters):
+    print('The following is a (or are) possible delimiter(s): ')
+    for d in delimiters:
+        print(delimiters[d], ': ', d)
+    raise ValueError('Specify \'delimiter=\' in keyword arguments')
+
+
+def _delimiter_gives_minimum_number_of_columns(line, delimiter, quote,
+                                               header=None, auto=None,
+                                               cycle=None, id_col_heading=None):
+    if delimiter is not None and delimiter == quote:
+        raise ValueError('Delimiter ', delimiter, ' and quote character ',
+                         quote, ' are the same.')
+
+    # If the first line is being parsed, the header argument is None by default.
+    if not _character_found_in_line(line, delimiter):
+        return False
+
+    else:
+        line = line.rstrip(delimiter + '\n')
+        testdelim = csv.reader([line], delimiter=delimiter, quotechar=quote,
+                               skipinitialspace=True)
+        parsed_line = list(testdelim)[0]
+        if header is None:
+            if id_col_heading:
+                assert _column_index_of_string(parsed_line, id_col_heading)
+
+            return _minimum_number_of_columns_exist(parsed_line)
+
+        else:
+            if auto or cycle:
+                ets = _expected_time_stamps(auto, cycle)
+            else:
+                ets = None
+
+            et = {'expected_time_stamps': ets}
+            return _minimum_number_of_columns_exist(parsed_line, **et)
+
+
+def _character_found_in_line(line, char):
+    delimre = re.compile(char)
+    return bool(delimre.search(line))
+
+
+def _expected_time_stamps(auto, cycle=None):
+    if auto in ('inside', 'outside'):
+        return 1
+    elif auto == 'cycles' or cycle:
+        return 2
+    else:
+        raise ValueError('Value of auto argument (\', auto, \') not found.\n  \
+                          Should be \'inside\', \'outside\', or \'cycles\'')
+
+
+def _minimum_number_of_columns_exist(csv_reader_out, expected_time_stamps=None):
+    if len(list(csv_reader_out)) >= 3:
+        if expected_time_stamps:  # Data row is being parsed
+            if _number_of_time_stamps_matches(csv_reader_out,
+                                              expected_time_stamps):
+                return True
+            else:
+                return False
+        # The header is being parsed and there are no time stamp values
+        else:
+            return True
+    else:
+        return False
+
+
+def _number_of_time_stamps_matches(parsed_line, num_expected_time_stamps):
+    time_stamps = 0
+
+    for val in parsed_line:
+        if _validate_time_stamp(val):
+            time_stamps += 1
+
+    if time_stamps == num_expected_time_stamps:
+        return True
+    else:
+        return False
+
+
+def _determine_quote(line, quote=None):
     quotech = None
+    if quote:
+        quotere = re.compile(quote)
+        if bool(quotere.search(line)):
+            quotech = quote
+            return quotech
+        else:
+            msg = quote + ' not found as quote. Check if quote character needs to be ' \
+                          'escaped with a \\. \n \" and \' are detected automatically.'
+            raise ValueError(msg)
+
     for q in ['\"', '\'']:
-        quotere = re.compile(q + '\D')
+        quotere = re.compile(q)
         if bool(quotere.search(line)):
             quotech = q
             break
@@ -932,36 +1438,9 @@ def _thermostats_ids_in_states(**kwargs):
     return thermostats_ids
 
 
-def _line_contains_digits(line):
+def _contains_digits(line):
     digits = re.compile('\d')
     return bool(digits.search(line))
-
-
-def _line_is_record_auto(line):
-    line_no_newline = line.rstrip('\n')
-    line_split = line_no_newline.split(',')
-    for col_val in line_split:
-        if col_val.isdigit():
-            return True
-    return False
-
-
-def _remove_quotes(string, quote):
-    """Returns line of file without leading or trailing quotes surrounding the
-    entire line.
-    """
-    if string.startswith(quote) and string.endswith(quote):
-        string = string[1:-1]
-    return string
-
-
-def _time_stamp_id(record):
-    return record[1]
-
-
-def _cooling_df(cycle_df):
-    idx = pd.IndexSlice
-    return cycle_df.loc[idx[:, [CYCLE_TYPE_COOL], :, :, :, :], :]
 
 
 def _missing_thermostats_or_postal_error_message():
@@ -978,16 +1457,20 @@ def _thermostats_states_df(**kwargs):
     """
     postal_file, thermostats_file = (kwargs.get(k) for k
                                      in ['postal_file', 'thermostats_file'])
-    states = (kwargs.get('states')).split(',')
-    auto = kwargs.get('auto')
-    zip_codes_df = _zip_codes_in_states(postal_file, states, auto)
-    thermos_df = _thermostats_df(thermostats_file, auto)
-    if auto:
-        header = _file_header(thermostats_file)
 
-        zip_heading = _label_of_col_containing_string_lower_upper_title(header, 'zip')
-    else:
-        zip_heading = THERMOSTAT_ZIP_CODE
+    states = (kwargs.get('states')).split(',')
+
+    auto = kwargs.get('auto') if kwargs.get('auto') else None
+
+    zip_codes_df = _zip_codes_in_states(postal_file, states, auto)
+
+    thermos_df = _thermostats_df(thermostats_file, auto)
+
+    header_kwargs = {'is_thermostats_file': True}
+    header, _ = _header_and_id_col_if_heading_or_preconfig(thermostats_file,
+                                                           **header_kwargs)
+
+    zip_heading = _label_of_col_containing_string_lower_upper_title(header, 'zip')
 
     thermostats_states_df = pd.merge(thermos_df, zip_codes_df, how='inner',
                                      left_on=zip_heading,
@@ -999,7 +1482,8 @@ def _zip_codes_in_states(postal_file, states, auto):
     """Returns pandas dataframe based on postal code metadata file, for states
      specified as list.
      """
-    header = _file_header(postal_file)
+    header, _ = _header_and_id_col_if_heading_or_preconfig(postal_file,
+                                                           is_postal_file=True)
     if auto:
         zip_col = _index_of_col_with_string_in_lower_upper_or_title(header, 'zip')
         if zip_col is None:
@@ -1024,19 +1508,20 @@ def _zip_codes_in_states(postal_file, states, auto):
     return zip_codes_df
 
 
-def _thermostats_df(thermostats_file, auto):
+def _thermostats_df(thermostats_file, auto, encoding='UTF-8', delimiter=None):
     """Returns pandas dataframe of thermostat metadata from raw file."""
-    with open(thermostats_file) as f:
-        header = _parse_first_line(f.readline())
+    kwargs = {'encoding': encoding, 'is_thermostats_file': True}
+    header, _ = _header_and_id_col_if_heading_or_preconfig(thermostats_file,
+                                                           **kwargs)
 
-    sample_records, _, _ = _select_sample_records(thermostats_file, header)
-
+    sample_records, _, _ = _select_sample_records(thermostats_file, header,
+                                                  encoding=encoding)
     if auto:
         zip_col = _index_of_col_with_string_in_lower_upper_or_title(header,
                                                                     'zip')
         zip_col_label = header[zip_col]
 
-        if _header_label_contains_id(header, 0) and _header_label_contains_id(header, 1):
+        if _contains_id_heading(header, 0) and _contains_id_heading(header, 1):
             id_col = _primary_id_col_from_two_fields(sample_records)
         else:
             id_col = _index_of_col_with_string_in_lower_upper_or_title(header, 'id')
@@ -1044,19 +1529,19 @@ def _thermostats_df(thermostats_file, auto):
             raise ValueError('No column found in thermostats file with label '
                              'containing \'id\', \'Id\', or \'ID\'.')
 
-        id_col_label = header[id_col]
+        id_col_heading = header[id_col]
     else:
         zip_col_label = THERMOSTAT_ZIP_CODE
-        id_col_label = THERMOSTAT_DEVICE_ID
+        id_col_heading = THERMOSTAT_DEVICE_ID
 
-    dtype_thermostat = {zip_col_label: 'str', id_col_label: 'str'}
+    dtype_thermostat = {zip_col_label: 'str', id_col_heading: 'str'}
     if os.path.splitext(thermostats_file)[1] == '.csv':
         thermos_df = pd.read_csv(thermostats_file,
                                  dtype=dtype_thermostat)
     else:
         thermos_df = pd.read_table(thermostats_file,
                                    dtype=dtype_thermostat)
-    thermos_df.set_index(keys=id_col_label, inplace=True)
+    thermos_df.set_index(keys=id_col_heading, inplace=True)
     thermos_df[zip_col_label] = thermos_df[zip_col_label].str.pad(5, side='left',
                                                                   fillchar='0')
     return thermos_df
@@ -1079,24 +1564,20 @@ def _index_of_col_with_string_in_lower_upper_or_title(header, string):
     return None
 
 
-def _file_header(raw_file):
-    with open(raw_file) as f:
-        header = _parse_first_line(f.readline())
-    return header
-
-
 def _locations_in_states(**kwargs):
     """Returns location IDs for locations in specified states."""
-    thermos_states_df = _thermostats_states_df(**kwargs)
-    location_ids_in_states = (thermos_states_df[THERMOSTAT_LOCATION_ID]
-                              .unique()
-                              .ravel()
-                              .astype(np.unicode))
+    if kwargs.get('states'):
+        thermos_states_df = _thermostats_states_df(**kwargs)
+        location_ids_in_states = (thermos_states_df[THERMOSTAT_LOCATION_ID]
+                                  .unique()
+                                  .ravel()
+                                  .astype(np.unicode))
+    else:
+        location_ids_in_states = None
     return location_ids_in_states
 
 
 # Fixed (static) file format handling
-
 
 def _data_type_matching_header(header):
     """Returns a string indicating the type of data corresponding to a header
@@ -1115,84 +1596,96 @@ def _data_type_matching_header(header):
     return data_type
 
 
-def _clean_cycles(lines, **kwargs):
+def _clean_cycles(raw_file, **kwargs):
     """Returns dict for cycling start and end times for thermostats, which may
     be filtered using 'states' parameter, a string that is a comma-separated
     series of state abbreviations.
     """
     clean_records = {}
-    states_selected, delimiter, quote = tuple(kwargs.get(k) for k in ['states',
-                                                                      'delimiter',
-                                                                      'quote'])
-    cycle = kwargs.get('cycle')
-    if states_selected:
+    args = ['states', 'cycle', 'delimiter', 'quote', 'header', 'cols_meta']
+    states, cycle, delimiter, quote, header, cols_meta = (kwargs.get(k) for k
+                                                          in args)
+    id_col = _id_col_position(cols_meta)
+    id_is_int = _id_is_int(cols_meta)
+    data_cols = _non_index_col_types(cols_meta)
+    if states:
         thermos_ids = _thermostats_ids_in_states(**kwargs)
-        for line in lines:
-            if not _line_contains_digits(line):
-                continue
-            record = _parse_line(line, delimiter, quote=quote)
-            if all(_validate_cycles_record(record, ids=thermos_ids,
-                                           cycle=cycle)):
-                # Cycle named tuple declaration is global, in order to ensure
-                # that named tuples using it can be pickled.
-                # Cycle = namedtuple('Cycle', ['thermo_id', 'cycle_mode',
-                # 'start_time'])
-                multicols = Cycle(thermo_id=_leading_id(record),
-                                  cycle_mode=_cycle_type(record),
-                                  start_time=_start_cycle(record))
-                clean_records[multicols] = _cycle_record_vals(record)
-                break
+        with open(raw_file, encoding=kwargs.get('encoding')) as lines:
+            _ = lines.readline()
+            for line in lines:
+                record = _record_from_line(line, delimiter, quote, header)
+                if record and all(_validate_cycles_record(record, ids=thermos_ids,
+                                  cycle=cycle)):
+                    # Cycle named tuple declaration is global, in order to ensure
+                    # that named tuples using it can be pickled.
+                    # Cycle = namedtuple('Cycle', ['thermo_id', 'cycle_mode',
+                    # 'start_time'])
+                    id_val = _id_val(record, id_col, id_is_int)
+                    multicols = Cycle(thermo_id=id_val,
+                                      cycle_mode=_cycle_type(record),
+                                      start_time=_start_cycle(record))
+                    clean_records[multicols] = _record_vals(record, data_cols)
     else:
-        clean_records = _clean_cycles_all_states(lines, **kwargs)
+        clean_records = _clean_cycles_all_states(raw_file, **kwargs)
 
     return clean_records
 
 
-def _clean_inside(lines, **kwargs):
+def _clean_inside(raw_file, **kwargs):
     """Returns dict for inside temperatures, which may be filtered using
     'states' parameter, a string that is a comma-separated series of state
     abbreviations.
     """
     clean_records = {}
-    states_selected, delimiter, quote = tuple(kwargs.get(k) for k in ['states',
-                                                                      'delimiter',
-                                                                      'quote'])
-    if states_selected:
-        thermos_states_ids = _thermostats_states_df(**kwargs).index.ravel()
-        for line in lines:
-            if not _line_contains_digits(line):
-                continue
-            record = _parse_line(line, delimiter, quote=quote)
-            if all(_validate_inside_record(record, ids=thermos_states_ids)):
-                # Inside named tuple declared globally, to enable pickling to
-                # work.
-                # Inside = namedtuple('Inside', ['thermo_id', 'log_date'])
-                multicols = Inside(thermo_id=_leading_id(record),
-                                   log_date=_inside_log_date(record))
-                clean_records[multicols] = _inside_degrees(record)
-    else:
-        clean_records = _clean_inside_all_states(lines, **kwargs)
+    args = ['states', 'header', 'delimiter', 'quote', 'cols_meta', 'encoding']
+    states, header, delimiter, quote, cols_meta, encoding = (kwargs.get(k)
+                                                             for k in args)
+    id_is_int = _id_is_int(cols_meta)
+    id_col = _id_col_position(cols_meta)
+    with open(raw_file, encoding=encoding) as lines:
+        _ = lines.readline()
+        if states:
+            thermos_ids = _thermostats_states_df(**kwargs).index.ravel()
+            for line in lines:
+                record = _record_from_line(line, delimiter, quote, header)
+                if record and all(_validate_inside_record(record,
+                                                          ids=thermos_ids)):
+                    # Inside named tuple declared globally, to enable pickling to
+                    # work.
+                    # Inside = namedtuple('Inside', ['thermo_id', 'timestamp'])
+                    id_val = _id_val(record, id_col, id_is_int)
+                    multicols = Inside(thermo_id=id_val,
+                                       timestamp=_inside_timestamp(record))
+                    clean_records[multicols] = _inside_degrees(record)
+        else:
+            clean_records = _clean_inside_all_states(raw_file, **kwargs)
 
     return clean_records
 
 
-def _clean_inside_all_states(lines, **kwargs):
+def _clean_inside_all_states(raw_file, **kwargs):
     """Returns dict for inside temperatures recorded by thermostats, regardless
     of state."""
     clean_records = {}
-    delimiter, quote = tuple(kwargs.get(k) for k in ['delimiter', 'quote'])
-    for line in lines:
-        if not _line_contains_digits(line):
-            continue
-        record = _parse_line(line, delimiter, quote=quote)
-        if all(_validate_inside_record(record)):
-            # Cycle named tuple declaration is global, in order to ensure that
-            # named tuples using it can be pickled.
-            # Cycle = namedtuple('Cycle', ['thermo_id', 'cycle_mode',
-            # 'start_time'])
-            multicols = Inside(thermo_id=_leading_id(record),
-                               log_date=_inside_log_date(record))
-            clean_records[multicols] = _inside_degrees(record)
+    args = ['header', 'delimiter', 'quote', 'encoding', 'cols_meta']
+    header, delimiter, quote, encoding, cols_meta = (kwargs.get(k)
+                                                     for k in args)
+    id_col = _id_col_position(cols_meta)
+    id_is_int = _id_is_int(cols_meta)
+    with open(raw_file, encoding=encoding) as lines:
+        _ = lines.readline()
+        for line in lines:
+            record = _record_from_line(line, delimiter, quote, header)
+            if record:
+                # Cycle named tuple declaration is global, in order to ensure that
+                # named tuples using it can be pickled.
+                # Cycle = namedtuple('Cycle', ['thermo_id', 'cycle_mode',
+                # 'start_time'])
+                id_val = _id_val(record, id_col, id_is_int)
+                multicols = Inside(thermo_id=id_val,
+                                   timestamp=_inside_timestamp(record))
+                clean_records[multicols] = _inside_degrees(record)
+
     return clean_records
 
 
@@ -1200,32 +1693,36 @@ def _validate_inside_record(record, ids=None):
     """Validate that line of text file containing indoor temperatures data
     has expected data content.
     """
-    yield _inside_rec_len(record)
-    yield all(record)
     if ids is not None:
         yield _leading_id(record) in ids
 
 
-def _clean_cycles_all_states(lines, **kwargs):
+def _clean_cycles_all_states(raw_file, **kwargs):
     """Returns dict for cycle start and end times of thermostats, regardless of
     state.
     """
     clean_records = {}
-    cycle = kwargs.get('cycle')
-    delimiter, quote = tuple(kwargs.get(k) for k in ['delimiter', 'quote'])
-    for line in lines:
-        if not _line_contains_digits(line):
-            continue
-        record = _parse_line(line, delimiter, quote=quote)
-        if all(_validate_cycles_record(record, cycle=cycle)):
-            # Cycle named tuple declaration is global, in order to ensure that
-            # named tuples using it can be pickled.
-            # Cycle = namedtuple('Cycle', ['thermo_id', 'cycle_mode',
-            # 'start_time'])
-            multicols = Cycle(thermo_id=_leading_id(record),
-                              cycle_mode=_cycle_type(record),
-                              start_time=_start_cycle(record))
-            clean_records[multicols] = _cycle_record_vals(record)
+    args = ['cycle', 'header', 'delimiter', 'quote', 'encoding', 'cols_meta']
+    cycle, header, delimiter, quote, encoding, cols_meta = (kwargs.get(k) for
+                                                            k in args)
+    id_col = _id_col_position(cols_meta)
+    id_is_int = _id_is_int(cols_meta)
+    data_cols = _non_index_col_types(cols_meta)
+    with open(raw_file, encoding=encoding) as lines:
+        _ = lines.readline()
+        for line in lines:
+            record = _record_from_line(line, delimiter, quote, header)
+            if record and all(_validate_cycles_record(record, cycle=cycle)):
+                # Cycle named tuple declaration is global, in order to ensure that
+                # named tuples using it can be pickled.
+                # Cycle = namedtuple('Cycle', ['thermo_id', 'cycle_mode',
+                # 'start_time'])
+                id_val = _id_val(record, id_col, id_is_int)
+                multicols = Cycle(thermo_id=id_val,
+                                  cycle_mode=_cycle_type(record),
+                                  start_time=_start_cycle(record))
+                clean_records[multicols] = _record_vals(record, data_cols)
+
     return clean_records
 
 
@@ -1233,64 +1730,85 @@ def _validate_cycles_record(record, ids=None, cycle=None):
     """Validate that line of text file containing cycing data
     has expected data content.
     """
-    yield _cycle_rec_len(record)
-    yield all(record)
     if ids is not None:
         yield _leading_id(record) in ids
     if cycle:
         yield _cycle_type(record) == cycle
 
 
-def _clean_outside(lines, **kwargs):
+def _clean_outside(raw_file, **kwargs):
     """Returns dict for outdoor temperatures by location, which may be filtered
     using 'states' parameter, a string that is a comma-separated series of
     state abbreviations.
     """
     clean_records = {}
-    states_selected, delimiter, quote = tuple(kwargs.get(k) for k in
-                                              ['states', 'delimiter', 'quote'])
-    if states_selected:
+    args = ['states', 'delimiter', 'quote', 'header', 'cols_meta', 'encoding']
+    states, delimiter, quote, header, cols_meta, encoding = (kwargs.get(k)
+                                                             for k in args)
+    id_is_int = _id_is_int(cols_meta)
+    id_col = _id_col_position(cols_meta)
+    if states:
         location_ids = _locations_in_states(**kwargs)
-        for line in lines:
-            if not _line_contains_digits(line):
-                continue
-            record = _parse_line(line, delimiter, quote=quote)
-            if all(_validate_outside_record(record, ids=location_ids)):
-                multicols = Outside(location_id=_leading_id(record),
-                                    log_date=_outside_log_date(record))
-                clean_records[multicols] = _outside_degrees(record)
+        with open(raw_file, encoding=encoding) as lines:
+            _ = lines.readline()
+            for line in lines:
+                record = _record_from_line(line, delimiter, quote, header)
+                if record and all(_validate_outside_record(record,
+                                                           ids=location_ids)):
+                    id_val = _id_val(record, id_col, id_is_int)
+                    multicols = Outside(location_id=id_val,
+                                        timestamp=_outside_timestamp(record))
+                    clean_records[multicols] = _outside_degrees(record)
     else:
-        clean_records = _clean_outside_all_states(lines, **kwargs)
+        clean_records = _clean_outside_all_states(raw_file, **kwargs)
 
     return clean_records
 
 
-def _clean_outside_all_states(lines, **kwargs):
+def _clean_outside_all_states(raw_file, **kwargs):
     """Returns dict for outdoor temperatures by location, regardless of
     state.
     """
     clean_records = {}
-    delimiter, quote = tuple(kwargs.get(k) for k in ['delimiter', 'quote'])
-    for line in lines:
-        if not _line_contains_digits(line):
-            continue
-        record = _parse_line(line, delimiter, quote=quote)
-        if all(_validate_outside_record(record)):
-            # Outside named tuple declared globally to enable pickling.
-            # The following is here for reference.
-            # Outside = namedtuple('Outside', ['location_id', 'log_date'])
-            multicols = Outside(location_id=_leading_id(record),
-                                log_date=_outside_log_date(record))
-            clean_records[multicols] = _outside_degrees(record)
+    args = ['delimiter', 'quote', 'header', 'encoding', 'cols_meta']
+    delimiter, quote, header, encoding, cols_meta = (kwargs.get(k)
+                                                     for k in args)
+    id_is_int = _id_is_int(cols_meta)
+    id_col = _id_col_position(cols_meta)
+    with open(raw_file, encoding=encoding) as lines:
+        _ = lines.readline()
+        for line in lines:
+            record = _record_from_line(line, delimiter, quote, header)
+            if record:
+                # Outside named tuple declared globally to enable pickling.
+                # The following is here for reference.
+                # Outside = namedtuple('Outside', ['location_id', 'timestamp'])
+                id_val = _id_val(record, id_col, id_is_int)
+                multicols = Outside(location_id=id_val,
+                                    timestamp=_outside_timestamp(record))
+                clean_records[multicols] = _outside_degrees(record)
+
     return clean_records
+
+
+def _id_col_position(cols_meta):
+    return cols_meta['id']['position']
+
+
+def _id_is_int(cols_meta):
+    id_is_int = True if cols_meta['id']['type'] == 'ints' else False
+    return id_is_int
+
+
+def _id_val(record, id_col, id_is_int):
+    id_val = int(record[id_col]) if id_is_int else record[id_col]
+    return id_val
 
 
 def _validate_outside_record(record, ids=None):
     """Validate that line of text file containing outdoor temperatures data
     has expected content.
     """
-    yield _outside_rec_len(record)
-    yield all(record)
     if ids is not None:
         yield _leading_id(record) in ids
 
@@ -1313,9 +1831,9 @@ def _cycle_record_vals(record):
     return record[start:end]
 
 
-def _inside_log_date(record):
-    log_date_position = INSIDE_LOG_DATE_INDEX
-    return record[log_date_position]
+def _inside_timestamp(record):
+    timestamp_position = INSIDE_LOG_DATE_INDEX
+    return record[timestamp_position]
 
 
 def _numeric_leads(record):
@@ -1334,19 +1852,11 @@ def _inside_rec_len(record):
     return True if len(record) == len(INSIDE_FIELDS) else False
 
 
-def _cycle_rec_len(record):
-    return True if len(record) == len(CYCLE_FIELDS) else False
-
-
-def _outside_log_date(record):
-    log_date_position = OUTSIDE_LOG_DATE_INDEX
-    return record[log_date_position]
+def _outside_timestamp(record):
+    timestamp_position = OUTSIDE_LOG_DATE_INDEX
+    return record[timestamp_position]
 
 
 def _outside_degrees(record):
     degrees_position = OUTSIDE_DEGREES_INDEX
     return record[degrees_position]
-
-
-def _outside_rec_len(record):
-    return True if len(record) == len(OUTSIDE_FIELDS) else False
