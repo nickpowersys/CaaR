@@ -5,13 +5,14 @@ from caar.cleanthermostat import pickle_from_file
 from caar.history import create_cycles_df
 from caar.history import create_inside_df
 from caar.history import create_outside_df
-from caar.history import random_record_from_dict
+from caar.history import random_record
 
 from caar.histsummary import days_of_data_by_id
 from caar.histsummary import consecutive_days_of_observations
 from caar.histsummary import daily_cycle_and_temp_obs_counts
 from caar.histsummary import daily_data_points_by_id
 from caar.histsummary import df_select_ids
+from caar.histsummary import df_select_datetime_range
 from caar.histsummary import count_of_data_points_for_each_id
 from caar.histsummary import count_of_data_points_for_select_id
 from caar.histsummary import location_id_of_thermo
