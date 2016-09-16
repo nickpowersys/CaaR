@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="WebServers">
+    <option name="servers">
+      <webServer id="fc9c05f4-01ff-41f1-92ff-6f88cce9cf11" name="My_AWS" url="http://52.53.173.101">
+        <fileTransfer host="52.53.173.101" port="8888" privateKey="$USER_HOME$/Documents/Computer/AWS/Bfboost_Nick.pem" accessType="SFTP" username="ubuntu" keyPair="true">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" />
+          </advancedOptions>
+          <option name="port" value="8888" />
+        </fileTransfer>
+      </webServer>
+    </option>
+  </component>
+</project>

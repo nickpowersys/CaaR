@@ -1,0 +1,7 @@
+caar/__pycache__/*.*.pyc
+docs/_build
+docs/_static
+docs/_templates
+tests/.cache
+dist
+.idea/dictionaries.xml

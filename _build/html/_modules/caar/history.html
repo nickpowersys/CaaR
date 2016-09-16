@@ -1,0 +1,387 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>caar.history &mdash; caar v0.0.6</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="caar v0.0.6" href="../../index.html"/>
+        <link rel="up" title="Module code" href="../index.html"/> 
+
+  
+  <script src="../../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../../index.html" class="icon icon-home"> caar
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.0.6
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../caar.html">caar package</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../../index.html">caar</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../index.html">Docs</a> &raquo;</li>
+      
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+      
+    <li>caar.history</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for caar.history</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">datetime</span> <span class="kn">as</span> <span class="nn">dt</span>
+<span class="kn">import</span> <span class="nn">pickle</span>
+<span class="kn">import</span> <span class="nn">random</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">namedtuple</span>
+
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="kn">as</span> <span class="nn">pd</span>
+
+
+<span class="kn">from</span> <span class="nn">caar.configparser_read</span> <span class="kn">import</span> <span class="n">INSIDE_DEVICE_ID</span><span class="p">,</span>                         \
+    <span class="n">INSIDE_LOG_DATE</span><span class="p">,</span> <span class="n">INSIDE_DEGREES</span><span class="p">,</span> <span class="n">CYCLE_DEVICE_ID</span><span class="p">,</span> <span class="n">CYCLE_START_TIME</span><span class="p">,</span>      \
+    <span class="n">CYCLE_END_TIME</span><span class="p">,</span> <span class="n">OUTSIDE_LOCATION_ID</span><span class="p">,</span> <span class="n">OUTSIDE_LOG_DATE</span><span class="p">,</span> <span class="n">OUTSIDE_DEGREES</span>
+
+
+<span class="n">Cycle</span> <span class="o">=</span> <span class="n">namedtuple</span><span class="p">(</span><span class="s1">&#39;Cycle&#39;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;thermo_id&#39;</span><span class="p">,</span> <span class="s1">&#39;cycle_mode&#39;</span><span class="p">,</span> <span class="s1">&#39;start_time&#39;</span><span class="p">])</span>
+<span class="n">Inside</span> <span class="o">=</span> <span class="n">namedtuple</span><span class="p">(</span><span class="s1">&#39;Inside&#39;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;thermo_id&#39;</span><span class="p">,</span> <span class="s1">&#39;log_date&#39;</span><span class="p">])</span>
+<span class="n">Outside</span> <span class="o">=</span> <span class="n">namedtuple</span><span class="p">(</span><span class="s1">&#39;Outside&#39;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;location_id&#39;</span><span class="p">,</span> <span class="s1">&#39;log_date&#39;</span><span class="p">])</span>
+
+
+<div class="viewcode-block" id="create_inside_df"><a class="viewcode-back" href="../../docs/caar.html#caar.history.create_inside_df">[docs]</a><span class="k">def</span> <span class="nf">create_inside_df</span><span class="p">(</span><span class="n">dict_or_pickle_file</span><span class="p">,</span> <span class="n">thermo_ids</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Returns pandas DataFrame containing thermostat ID, timestamps and</span>
+<span class="sd">    inside temperatures at the time of cooling (or heating) cycles starting</span>
+<span class="sd">    and ending.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        dict_or_pickle_file (dict or str): The object must have been created with dict_from_file() or pickle_from_file() function.</span>
+
+<span class="sd">        thermo_ids (Optional[list or other iterable of ints]): Thermostat IDs. If no argument is specified, all IDs from the first arg will be in the DataFrame.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        inside_df (pandas DataFrame): DataFrame has MultiIndex based on the</span>
+<span class="sd">        ID(s) and timestamps.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">multi_ids</span><span class="p">,</span> <span class="n">vals</span> <span class="o">=</span> <span class="n">_records_as_lists_of_tuples</span><span class="p">(</span><span class="n">dict_or_pickle_file</span><span class="p">,</span>
+                                                  <span class="s1">&#39;thermo_id&#39;</span><span class="p">,</span> <span class="s1">&#39;log_date&#39;</span><span class="p">,</span>
+                                                  <span class="n">ids</span><span class="o">=</span><span class="n">thermo_ids</span><span class="p">)</span>
+    <span class="n">inside_df</span> <span class="o">=</span> <span class="n">_create_multi_index_df</span><span class="p">([</span><span class="n">INSIDE_DEVICE_ID</span><span class="p">,</span> <span class="n">INSIDE_LOG_DATE</span><span class="p">],</span>
+                                       <span class="n">multi_ids</span><span class="p">,</span> <span class="p">[</span><span class="n">INSIDE_DEGREES</span><span class="p">],</span> <span class="n">vals</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">inside_df</span></div>
+
+
+<div class="viewcode-block" id="create_cycles_df"><a class="viewcode-back" href="../../docs/caar.html#caar.history.create_cycles_df">[docs]</a><span class="k">def</span> <span class="nf">create_cycles_df</span><span class="p">(</span><span class="n">dict_or_pickle_file</span><span class="p">,</span> <span class="n">thermo_ids</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Returns pandas DataFrame containing thermostat ids and cycle beginning</span>
+<span class="sd">    timestamps as multi-part indexes, and cycle ending times as values.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        dict_or_pickle_file (dict or str): Must have been created with dict_from_file() or pickle_from_file() function.</span>
+
+<span class="sd">        thermo_ids (Optional[list or other iterable of ints]): Thermostat IDs. If no  argument is specified, all IDs from the first arg will be in the DataFrame.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        cycles_df (pandas DataFrame): DataFrame has MultiIndex based on the ID(s) and timestamps.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">multi_ids</span><span class="p">,</span> <span class="n">vals</span> <span class="o">=</span> <span class="n">_records_as_lists_of_tuples</span><span class="p">(</span><span class="n">dict_or_pickle_file</span><span class="p">,</span>
+                                                  <span class="s1">&#39;thermo_id&#39;</span><span class="p">,</span> <span class="s1">&#39;start_time&#39;</span><span class="p">,</span>
+                                                  <span class="n">ids</span><span class="o">=</span><span class="n">thermo_ids</span><span class="p">)</span>
+    <span class="n">cycles_df</span> <span class="o">=</span> <span class="n">_create_multi_index_df</span><span class="p">([</span><span class="n">CYCLE_DEVICE_ID</span><span class="p">,</span> <span class="n">CYCLE_START_TIME</span><span class="p">],</span>
+                                       <span class="n">multi_ids</span><span class="p">,</span> <span class="p">[</span><span class="n">CYCLE_END_TIME</span><span class="p">],</span> <span class="n">vals</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">cycles_df</span></div>
+
+
+<div class="viewcode-block" id="create_outside_df"><a class="viewcode-back" href="../../docs/caar.html#caar.history.create_outside_df">[docs]</a><span class="k">def</span> <span class="nf">create_outside_df</span><span class="p">(</span><span class="n">dict_or_pickle_file</span><span class="p">,</span> <span class="n">location_ids</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Returns pandas DataFrame containing records with location IDs and time</span>
+<span class="sd">    stamps as multi-part indexes and outdoor temperatures as values.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        dict_or_pickle_file (dict or str): Must have been created with dict_from_file() or pickle_from_file() function.</span>
+
+<span class="sd">        location_ids (Optional[list or other iterable of ints]): Location IDs. If no argument is specified, all IDs from the first arg will be in the DataFrame.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        outside_df (pandas DataFrame): DataFrame has MultiIndex based on the ID(s) and timestamps.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">multi_ids</span><span class="p">,</span> <span class="n">vals</span> <span class="o">=</span> <span class="n">_records_as_lists_of_tuples</span><span class="p">(</span><span class="n">dict_or_pickle_file</span><span class="p">,</span>
+                                                  <span class="s1">&#39;location_id&#39;</span><span class="p">,</span> <span class="s1">&#39;log_date&#39;</span><span class="p">,</span>
+                                                  <span class="n">ids</span><span class="o">=</span><span class="n">location_ids</span><span class="p">)</span>
+    <span class="n">outside_df</span> <span class="o">=</span> <span class="n">_create_multi_index_df</span><span class="p">([</span><span class="n">OUTSIDE_LOCATION_ID</span><span class="p">,</span>
+                                         <span class="n">OUTSIDE_LOG_DATE</span><span class="p">],</span> <span class="n">multi_ids</span><span class="p">,</span>
+                                        <span class="p">[</span><span class="n">OUTSIDE_DEGREES</span><span class="p">],</span> <span class="n">vals</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">outside_df</span></div>
+
+
+<span class="k">def</span> <span class="nf">_records_as_lists_of_tuples</span><span class="p">(</span><span class="n">dict_or_pickle_file</span><span class="p">,</span> <span class="n">id_field</span><span class="p">,</span> <span class="n">time_field</span><span class="p">,</span>
+                                <span class="n">ids</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Returns tuple containing</span>
+<span class="sd">    1) a list of named tuples containing thermostat (or outdoor location) ids</span>
+<span class="sd">    and timestamps and</span>
+<span class="sd">    2) a list of either indoor (or outdoor) temperatures, or the ending time</span>
+<span class="sd">    of a cycle, based on input of a pickle file containing a dict.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">dict_or_pickle_file</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+        <span class="n">records</span> <span class="o">=</span> <span class="n">dict_or_pickle_file</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">dict_or_pickle_file</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">cp</span><span class="p">:</span>
+                <span class="n">records</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">cp</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+            <span class="k">print</span><span class="p">(</span><span class="s1">&#39;The first argument must be a pickle file or dict.&#39;</span><span class="p">)</span>
+
+    <span class="n">random_record</span> <span class="o">=</span> <span class="n">random_record_from_dict</span><span class="p">(</span><span class="n">records</span><span class="p">,</span> <span class="n">value_only</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">data_type</span> <span class="o">=</span> <span class="n">_determine_if_temperature_or_time_data</span><span class="p">(</span><span class="n">random_record</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">ids</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">record_key</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">records</span><span class="o">.</span><span class="n">keys</span><span class="p">()):</span>
+            <span class="c1"># Discard record if it is not among the desired ids.</span>
+            <span class="k">if</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">record_key</span><span class="p">,</span> <span class="n">id_field</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">ids</span><span class="p">:</span>
+                <span class="n">records</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">record_key</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+    <span class="n">multi_ids</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">vals</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="c1"># inside and outside temperatures have temperature data</span>
+    <span class="k">if</span> <span class="n">data_type</span> <span class="o">==</span> <span class="s1">&#39;temperature&#39;</span><span class="p">:</span>
+        <span class="n">multi_ids</span><span class="p">,</span> <span class="n">vals</span> <span class="o">=</span> <span class="n">_temps_multi_ids</span><span class="p">(</span><span class="n">records</span><span class="p">,</span> <span class="n">id_field</span><span class="p">,</span> <span class="n">time_field</span><span class="p">)</span>
+    <span class="c1"># time_stamp data (the data value detected is end time) is associated</span>
+    <span class="c1"># with cycling data</span>
+    <span class="k">elif</span> <span class="n">data_type</span> <span class="o">==</span> <span class="s1">&#39;time_stamp&#39;</span><span class="p">:</span>
+        <span class="n">multi_ids</span><span class="p">,</span> <span class="n">vals</span> <span class="o">=</span> <span class="n">_cycles_multi_ids</span><span class="p">(</span><span class="n">records</span><span class="p">,</span> <span class="n">id_field</span><span class="p">,</span> <span class="n">time_field</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">multi_ids</span><span class="p">,</span> <span class="n">vals</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="random_record_from_dict"><a class="viewcode-back" href="../../docs/caar.html#caar.history.random_record_from_dict">[docs]</a><span class="k">def</span> <span class="nf">random_record_from_dict</span><span class="p">(</span><span class="n">records</span><span class="p">,</span> <span class="n">value_only</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Returns a randomly chosen key-value pair from a dict.&quot;&quot;&quot;</span>
+    <span class="n">copied_keys</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">records</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+    <span class="n">random_record_key</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="n">copied_keys</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">value_only</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">records</span><span class="p">[</span><span class="n">random_record_key</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">random_record_key</span><span class="p">,</span> <span class="n">records</span><span class="p">[</span><span class="n">random_record_key</span><span class="p">])</span></div>
+
+
+<span class="k">def</span> <span class="nf">_determine_if_temperature_or_time_data</span><span class="p">(</span><span class="n">record_data</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Returns &#39;temperature&#39; or &#39;time_stamp&#39; (a string) based on the content of the</span>
+<span class="sd">    value in a dict item.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">record_data</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">_datetime_from_string</span><span class="p">(</span><span class="n">record_data</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span>
+                              <span class="n">dt</span><span class="o">.</span><span class="n">datetime</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+            <span class="k">print</span><span class="p">(</span><span class="s1">&#39;The data field from the tuple does not match the given &#39;</span>
+                  <span class="s1">&#39;time format.&#39;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s1">&#39;time_stamp&#39;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="nb">isinstance</span><span class="p">(</span><span class="n">record_data</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+            <span class="k">print</span><span class="p">(</span><span class="s1">&#39;The data field is not a string within a tuple or a string.&#39;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s1">&#39;temperature&#39;</span>
+
+
+<span class="k">def</span> <span class="nf">_temps_multi_ids</span><span class="p">(</span><span class="n">records</span><span class="p">,</span> <span class="n">id_field</span><span class="p">,</span> <span class="n">time_field</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Returns tuple containing</span>
+<span class="sd">    1) a list of named tuples containing thermostat ids and timestamps and</span>
+<span class="sd">    2) a list of either indoor (or outdoor) temperatures, based on items</span>
+<span class="sd">    (records) in a dict.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">multi_ids</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">vals</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">records</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">record_id</span><span class="p">,</span> <span class="n">time_stamp</span> <span class="o">=</span> <span class="p">[</span><span class="nb">getattr</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="p">[</span><span class="n">id_field</span><span class="p">,</span> <span class="n">time_field</span><span class="p">]]</span>
+        <span class="n">time</span> <span class="o">=</span> <span class="n">_datetime_from_string</span><span class="p">(</span><span class="n">time_stamp</span><span class="p">)</span>
+        <span class="n">multi_ids</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">tuple</span><span class="p">([</span><span class="n">record_id</span><span class="p">,</span> <span class="n">time</span><span class="p">]))</span>
+        <span class="n">temperature</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+        <span class="n">vals</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">temperature</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">multi_ids</span><span class="p">,</span> <span class="n">vals</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_cycles_multi_ids</span><span class="p">(</span><span class="n">records</span><span class="p">,</span> <span class="n">id_field</span><span class="p">,</span> <span class="n">time_field</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Returns tuple containing</span>
+<span class="sd">    1) a list of named tuples containing outdoor location IDs and timestamps</span>
+<span class="sd">    and</span>
+<span class="sd">    2) a list of ending times of cycles, based on a dict.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">multi_ids</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">vals</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">records</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">record_id</span><span class="p">,</span> <span class="n">time_stamp</span> <span class="o">=</span> <span class="p">[</span><span class="nb">getattr</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="p">[</span><span class="n">id_field</span><span class="p">,</span> <span class="n">time_field</span><span class="p">]]</span>
+        <span class="n">time</span> <span class="o">=</span> <span class="n">_datetime_from_string</span><span class="p">(</span><span class="n">time_stamp</span><span class="p">)</span>
+        <span class="n">multi_ids</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">tuple</span><span class="p">([</span><span class="n">record_id</span><span class="p">,</span> <span class="n">time</span><span class="p">]))</span>
+        <span class="n">end_time</span> <span class="o">=</span> <span class="n">_datetime_from_string</span><span class="p">(</span><span class="n">v</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">vals</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">end_time</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">multi_ids</span><span class="p">,</span> <span class="n">vals</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_datetime_from_string</span><span class="p">(</span><span class="n">time_string</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">dt</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="n">time_string</span><span class="p">,</span> <span class="s1">&#39;%Y-%m-</span><span class="si">%d</span><span class="s1"> %H:%M:%S&#39;</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_create_multi_index_df</span><span class="p">(</span><span class="n">multiindex_names</span><span class="p">,</span> <span class="n">multi_ids</span><span class="p">,</span> <span class="n">column_names</span><span class="p">,</span> <span class="n">values</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Returns MultiIndex pandas dataframe in which the index columns are for</span>
+<span class="sd">    an id and timestamp and the value is for a temperature or a timestamp</span>
+<span class="sd">    indicating the end of a cycle.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">multiindex_columns</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">multiindex_names</span><span class="p">)</span>
+    <span class="n">multicols</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">MultiIndex</span><span class="o">.</span><span class="n">from_tuples</span><span class="p">(</span><span class="n">multi_ids</span><span class="p">,</span> <span class="n">names</span><span class="o">=</span><span class="n">multiindex_columns</span><span class="p">)</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="n">multicols</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="n">column_names</span><span class="p">)</span>
+    <span class="n">df</span><span class="o">.</span><span class="n">sortlevel</span><span class="p">(</span><span class="n">inplace</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">sort_remaining</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">df</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, Nicholas A. Brown.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../../',
+            VERSION:'0.0.6',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="../../_static/jquery.js"></script>
+      <script type="text/javascript" src="../../_static/underscore.js"></script>
+      <script type="text/javascript" src="../../_static/doctools.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

@@ -1,0 +1,17 @@
+Metadata-Version: 1.2
+Name: caar
+Version: 0.0.6
+Summary: Accelerating analysis of data on temperatures and thermostat-driven loads.
+Home-page: http://github.com/nickpowersys/CaaR/
+Author: Nicholas A. Brown
+Author-email: nbprofessional@gmail.com
+License: BSD 3-Clause License
+Description: UNKNOWN
+Platform: any
+Classifier: Programming Language :: Python :: 3.4
+Classifier: Programming Language :: Python :: 3.5
+Classifier: Development Status :: 4 - Beta
+Classifier: Natural Language :: English
+License :: OSI Approved :: BSD License
+Classifier: Operating System :: OS Independent
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
