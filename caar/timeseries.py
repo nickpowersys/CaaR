@@ -136,7 +136,7 @@ def temps_arr_by_freq(df, id, start, end, freq='1min', actuals_only=False):
     idx = pd.IndexSlice
     if len(df.index._levels) == 2:
         records = df.loc[idx[id, start:end], :]
-    elif len(df.index._levesl) == 3:
+    elif len(df.index._levels) == 3:
         records = df.loc[idx[id, :, start:end], :]
     time_index = _get_time_level_of_df_multiindex(df)
     timestamps = pd.DatetimeIndex(records
