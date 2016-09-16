@@ -537,9 +537,9 @@ def start_of_first_full_day_df(df):
     return start_earliest_full_day
 
 
-def start_of_last_full_day_df(cycle_df):
+def start_of_last_full_day_df(df):
     time_index_level = _get_time_level_of_df_multiindex(df)
-    last_timestamp = (cycle_df
+    last_timestamp = (df
                       .index
                       .get_level_values(level=time_index_level)
                       .max())
