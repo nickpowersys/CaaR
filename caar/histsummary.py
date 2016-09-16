@@ -436,6 +436,14 @@ def _get_time_label_of_data(df):
     return None
 
 
+def _get_time_column_of_data(df):
+    time_label = _get_time_label_of_data(df)
+    for i, label in enumerate(df.columns):
+        if label == time_label:
+            break
+    return i
+
+
 def _get_label_of_first_data_column(df):
     return df.columns[0]
 
@@ -445,6 +453,13 @@ def _get_labels_of_data_columns(df):
     for col in df.columns:
         col_labels.append(col)
     return col_labels
+
+
+def _get_column_of_data_label(df, label):
+    for i, col_label in enumerate(df.columns):
+        if col_label == label:
+            break
+    return i
 
 
 def squared_avg_daily_data_points_per_id(df):
@@ -504,13 +519,13 @@ def number_of_days(df):
     return (last_day - first_day)/np.timedelta64(1, 'D')
 
 
-def start_of_first_full_day_df(cycle_df):
+def start_of_first_full_day_df(df):
     """"Returns datetime.datetime value of the very beginning of the first
     full day for which data is given in a pandas DataFrame. The DataFrame
     must have a MultiIndex in which the time level of the index
     contains timestamps."""
     time_index_level = _get_time_level_of_df_multiindex(df)
-    earliest_timestamp = (cycle_df
+    earliest_timestamp = (df
                           .index
                           .get_level_values(level=time_index_level)
                           .min())

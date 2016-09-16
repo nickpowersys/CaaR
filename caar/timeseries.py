@@ -2,7 +2,9 @@ from __future__ import absolute_import, division, print_function
 import datetime as dt
 import numpy as np
 import pandas as pd
-from caar.histsummary import location_id_of_thermo, _get_time_level_of_df_multiindex
+from caar.histsummary import location_id_of_thermo, \
+    _get_time_level_of_df_multiindex, _get_time_column_of_data, \
+    _get_column_of_data_label
 
 from future import standard_library
 standard_library.install_aliases()
@@ -94,7 +96,8 @@ def on_off_status(df, id, start, end, freq='1min'):
     starts_by_freq = (raw_record_starts
                       .snap(freq=freq)
                       .tolist())
-    raw_record_ends = pd.DatetimeIndex(records.iloc[:, 0]
+    time_column = _get_time_column_of_data(df)
+    raw_record_ends = pd.DatetimeIndex(records.iloc[:, time_column]
                                        .tolist())
     record_ends_by_freq = (raw_record_ends
                            .snap(freq=freq)
@@ -107,7 +110,7 @@ def on_off_status(df, id, start, end, freq='1min'):
     return status_in_intervals
 
 
-def temps_arr_by_freq(df, id, start, end, freq='1min', actuals_only=False):
+def temps_arr_by_freq(df, id, start, end, cols=None, freq='1min', actuals_only=False):
     """Returns NumPy array containing timestamps ('times') and temperatures at the specified frequency. If *actuals_only* is True, only the observed temperatures will be returned in an array. Otherwise, by default, intervals without observations are filled with zeros.
 
     Args:
@@ -118,6 +121,8 @@ def temps_arr_by_freq(df, id, start, end, freq='1min', actuals_only=False):
         start (datetime.datetime): First interval to include in output array.
 
         end (datetime.datetime): Last interval to include in output array.
+
+        cols (Optional[str or list of str]): Column heading/label or list of labels for column(s) should be in the output (array) as data. By default, the first data column on the left is in the output, while others are left out.
 
         freq (str): Frequency of intervals in output, specified in format recognized by pandas.
 
@@ -145,7 +150,15 @@ def temps_arr_by_freq(df, id, start, end, freq='1min', actuals_only=False):
     timestamps_by_freq = (timestamps
                           .snap(freq=freq)
                           .tolist())
-    temps_by_minute = (records.iloc[:, 0]
+    if cols is None:
+        data_cols = 0
+    elif isinstance(cols, str):
+        data_cols = _get_column_of_data_label(cols)
+    elif isinstance(cols, list):
+        data_cols = []
+        for label in cols:
+            data_cols.append(_get_column_of_data_label(df, label))
+    temps_by_minute = (records.iloc[:, data_cols]
                        .tolist())
     # Populate the array with temperatures.
     for i in range(len(records)):
