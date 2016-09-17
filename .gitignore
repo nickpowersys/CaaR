@@ -5,3 +5,11 @@ docs/_templates
 tests/.cache
 dist
 .idea/dictionaries.xml
+.idea
+.cache
+__pycache__/**
+_build/**
+caar.egg-info
+setuptools-25.1.4.zip
+punch_config.py
+punch_version.py
