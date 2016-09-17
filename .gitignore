@@ -1,5 +1,6 @@
 __pycache__/
 *.py[cod]
+.pypirc
 docs/_build/
 docs/_static/
 docs/_templates/
