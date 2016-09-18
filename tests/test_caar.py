@@ -228,20 +228,20 @@ def test_df_creation_after_fixed_dict(data_file, states, thermostats, postal, cy
     df = df_creation_func(clean_dict, **kwargs)
     assert isinstance(df, pd.DataFrame)
 
-# @slow
-# @pytest.mark.parametrize("df_fixture, id, start, end, freq",
-#                          [(cycle_df_fixture(), THERMO_ID1, dt.datetime(2012, 6, 18, 21, 0, 0),
-#                            dt.datetime(2012, 6, 18, 23, 0, 0), '1min30s'),
-#                           (cycle_df_fixture(), THERMO_ID1, dt.datetime(2012, 6, 18, 21, 0, 0),
-#                            dt.datetime(2012, 6, 18, 23, 0, 0), 'min30s'),
-#                           (cycle_df_fixture(), THERMO_ID1, dt.datetime(2012, 6, 18, 21, 0, 0),
-#                            dt.datetime(2012, 6, 18, 23, 0, 0), '2min'),
-#                           (cycle_df_fixture(), THERMO_ID1, dt.datetime(2012, 6, 18, 21, 0, 0),
-#                            dt.datetime(2012, 6, 18, 23, 0, 0), 'min')])
-# def test_on_off_status_by_interval(df_fixture, id, start, end, freq):
-#     kwargs = {'freq': freq}
-#     on_off = ts.on_off_status(df_fixture, id, start, end, **kwargs)
-#     assert len(on_off['times']) > 0
+
+@pytest.mark.parametrize("df_fixture, id, start, end, freq",
+                         [(cycle_df_fixture(), THERMO_ID1, dt.datetime(2012, 6, 18, 21, 0, 0),
+                           dt.datetime(2012, 6, 18, 23, 0, 0), '1min30s'),
+                          (cycle_df_fixture(), THERMO_ID1, dt.datetime(2012, 6, 18, 21, 0, 0),
+                           dt.datetime(2012, 6, 18, 23, 0, 0), 'min30s'),
+                          (cycle_df_fixture(), THERMO_ID1, dt.datetime(2012, 6, 18, 21, 0, 0),
+                           dt.datetime(2012, 6, 18, 23, 0, 0), '2min'),
+                          (cycle_df_fixture(), THERMO_ID1, dt.datetime(2012, 6, 18, 21, 0, 0),
+                           dt.datetime(2012, 6, 18, 23, 0, 0), 'min')])
+def test_on_off_status_by_interval(df_fixture, id, start, end, freq):
+    kwargs = {'freq': freq}
+    on_off = ts.on_off_status(df_fixture, id, start, end, **kwargs)
+    assert len(on_off['times']) > 0
 #
 # @slow
 # @pytest.mark.parametrize("df_fixture, id, start, end, freq",

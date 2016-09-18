@@ -103,11 +103,19 @@ def on_off_status(df, id, start, end, freq='1min'):
                            .snap(freq=freq)
                            .tolist())
     # Populate array
+    starts = _integer_index_based_on_freq(starts_by_freq, start, freq)
+    ends = _integer_index_based_on_freq(record_ends_by_freq, start, freq)
+
     for i in range(len(records)):
-        start_index = _index_of_timestamp(start, starts_by_freq[i], freq)
-        end_index = _index_of_timestamp(start, record_ends_by_freq[i], freq)
-        status_in_intervals[start_index:end_index + 1]['on'] = 1
+        status_in_intervals[starts[i]:ends[i] + 1]['on'] = 1
     return status_in_intervals
+
+
+def _integer_index_based_on_freq(datetimes, reference, frequency):
+    time_deltas = pd.Series(datetimes) - reference
+    freq = _timedelta_from_string(frequency)
+    indexes = np.array(time_deltas/freq).astype(np.int)
+    return indexes
 
 
 def temps_arr_by_freq(df, id, start, end, cols=None, freq='1min', actuals_only=False):
