@@ -2,8 +2,8 @@ from __future__ import absolute_import, division, print_function
 import datetime as dt
 import numpy as np
 import pandas as pd
-from caar.histsummary import location_id_of_thermo, \
-    _get_time_level_of_df_multiindex, _get_time_column_of_data, \
+from caar.histsummary import location_id_of_thermo, _get_time_column_of_data,  \
+    _get_time_level_of_df_multiindex, _sliced_by_id_or_ids_and_time_index,     \
     _get_column_of_data_label
 
 from future import standard_library
@@ -68,7 +68,7 @@ def on_off_status(df, id, start, end, freq='1min'):
     Args:
         df (pandas DataFrame): The DataFrame should contain cycles data, and should have been created by the **history** module.
 
-        id (int): Thermostat ID.
+        id (int or str): Thermostat ID.
 
         start (datetime.datetime): Starting datetime.
 
@@ -84,38 +84,58 @@ def on_off_status(df, id, start, end, freq='1min'):
                                    dtype=[('times', 'datetime64[m]'),
                                           ('on', 'int8')])
     status_in_intervals['times'] = dt_index.to_pydatetime()
-    idx = pd.IndexSlice
-    # End should already be late enough that additional Timedelta of 1 unit of
-    # frequency is not needed
-    records = df.loc[idx[id, :, start:end], :]
-    # Start times of ON cycles
-    time_index = _get_time_level_of_df_multiindex(df)
-    raw_record_starts = pd.DatetimeIndex(records
-                                         .index
-                                         .get_level_values(time_index))
-    starts_by_freq = (raw_record_starts
-                      .snap(freq=freq)
-                      .tolist())
-    time_column = _get_time_column_of_data(df)
-    raw_record_ends = pd.DatetimeIndex(records.iloc[:, time_column]
-                                       .tolist())
-    record_ends_by_freq = (raw_record_ends
-                           .snap(freq=freq)
-                           .tolist())
-    # Populate array
-    starts = _integer_index_based_on_freq(starts_by_freq, start, freq)
-    ends = _integer_index_based_on_freq(record_ends_by_freq, start, freq)
-
-    for i in range(len(records)):
+    # Start and end times of ON cycles
+    kwargs = {'id_or_ids': id, 'start': start, 'end': end, 'freq': freq}
+    starts = _df_select_time_index_values(df, **kwargs)
+    ends = _df_select_time_data_values(df, **kwargs)
+    for i in range(len(starts)):
         status_in_intervals[starts[i]:ends[i] + 1]['on'] = 1
     return status_in_intervals
 
 
-def _integer_index_based_on_freq(datetimes, reference, frequency):
-    time_deltas = pd.Series(datetimes) - reference
+def _integer_index_dec(func):
+    def wrapper(arg, **kwargs):
+        decorated = func(arg, **kwargs)
+        start, freq = (kwargs.get(k) for k in ['start', 'freq'])
+        decorated = _integer_index_based_on_freq(decorated, zero_index=start, frequency=freq)
+        return decorated
+    return wrapper
+
+
+def _integer_index_based_on_freq(datetimes, zero_index, frequency):
+    time_deltas = pd.Series(datetimes) - zero_index
     freq = _timedelta_from_string(frequency)
     indexes = np.array(time_deltas/freq).astype(np.int)
     return indexes
+
+
+@_integer_index_dec
+def _df_select_time_index_values(df, id_or_ids=None, start=None, end=None, freq=None):
+    sliced = _sliced_by_id_or_ids_and_time_index(df, id_or_ids, start, end)
+    times_by_freq = (_df_time_index(sliced)
+                     .snap(freq=freq)
+                     .tolist())
+    return times_by_freq
+
+
+@_integer_index_dec
+def _df_select_time_data_values(df, id_or_ids=None, start=None, end=None, freq=None):
+    sliced = _sliced_by_id_or_ids_and_time_index(df, id_or_ids, start, end)
+    time_column = _get_time_column_of_data(df)
+    raw_record_ends = pd.DatetimeIndex(sliced.iloc[:, time_column]
+                                       .tolist())
+    ends_by_freq = (raw_record_ends
+                    .snap(freq=freq)
+                    .tolist())
+    return ends_by_freq
+
+
+def _df_time_index(df):
+    time_index = _get_time_level_of_df_multiindex(df)
+    raw_record_times = pd.DatetimeIndex(df
+                                        .index
+                                        .get_level_values(time_index))
+    return raw_record_times
 
 
 def temps_arr_by_freq(df, id, start, end, cols=None, freq='1min', actuals_only=False):
@@ -124,7 +144,7 @@ def temps_arr_by_freq(df, id, start, end, cols=None, freq='1min', actuals_only=F
     Args:
         df (pandas DataFrame): DataFrame with temperatures from **history** module.
 
-        id (int): Thermostat ID.
+        id (int or str): Thermostat ID or Location ID.
 
         start (datetime.datetime): First interval to include in output array.
 

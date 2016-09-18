@@ -462,6 +462,12 @@ def _get_column_of_data_label(df, label):
     return i
 
 
+def _sliced_by_id_or_ids_and_time_index(df, id_or_ids, start, end):
+    sliced_by_id = _slice_by_single_index(df, id_index=id_or_ids)
+    sliced_by_dt = _slice_by_single_index(sliced_by_id, time_index=(start, end))
+    return sliced_by_dt
+
+
 def squared_avg_daily_data_points_per_id(df):
     """ Returns DataFrame grouped by the primary id (ThermostatId or
     LocationId) and by day. The value column has the count of data points
