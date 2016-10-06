@@ -48,40 +48,40 @@ CYCLE_TYPE_COOL = parser.get('record_values', 'CYCLE_TYPE_COOL')
 INSIDE_FIELD1 = parser.get('file_headers', 'INSIDE_FIELD1')
 INSIDE_FIELD2 = parser.get('file_headers', 'INSIDE_FIELD2')
 INSIDE_FIELD3 = parser.get('file_headers', 'INSIDE_FIELD3')
-INSIDE_FIELDS = tuple([INSIDE_FIELD1, INSIDE_FIELD2, INSIDE_FIELD3])
+SENSOR_FIELDS = tuple([INSIDE_FIELD1, INSIDE_FIELD2, INSIDE_FIELD3])
 
-# THERMO_ID_FIELD is the string heading of corresponding field
-# INSIDE_ID_INDEX gives the index of the INSIDE field containing device ID
-# in the tuple INSIDE_FIELDS.
-THERMO_ID_FIELD = INSIDE_FIELDS[int(parser.get('file_headers', 'INSIDE_ID_INDEX'))]
+# SENSOR_ID_FIELD is the string heading of corresponding field
+# SENSOR_ID_INDEX gives the index of the INSIDE field containing device ID
+# in the tuple SENSOR_FIELDS.
+SENSOR_ID_FIELD = SENSOR_FIELDS[int(parser.get('file_headers', 'SENSOR_ID_INDEX'))]
 
 # Ints: 0-based positions of fields in raw file
-INSIDE_ID_INDEX = int(parser.get('file_headers', 'INSIDE_ID_INDEX'))
-INSIDE_LOG_DATE_INDEX = int(parser.get('file_headers', 'INSIDE_LOG_DATE_INDEX'))
-INSIDE_DEGREES_INDEX = int(parser.get('file_headers', 'INSIDE_DEGREES_INDEX'))
+SENSOR_ID_INDEX = int(parser.get('file_headers', 'SENSOR_ID_INDEX'))
+SENSORS_LOG_DATE_INDEX = int(parser.get('file_headers', 'SENSORS_LOG_DATE_INDEX'))
+SENSORS_DATA_INDEX = int(parser.get('file_headers', 'SENSORS_DATA_INDEX'))
 # INSIDE_TEMP_FIELD is the string heading of corresponding field
 # INSIDE_TEMP_INDEX is index of field containing inside temperature
-INSIDE_TEMP_FIELD = INSIDE_FIELDS[int(parser.get('file_headers', 'INSIDE_DEGREES_INDEX'))]
+INSIDE_TEMP_FIELD = SENSOR_FIELDS[int(parser.get('file_headers', 'SENSORS_DATA_INDEX'))]
 
 # Outside observation file column names
 OUTSIDE_FIELD1 = parser.get('file_headers', 'OUTSIDE_FIELD1')
 OUTSIDE_FIELD2 = parser.get('file_headers', 'OUTSIDE_FIELD2')
 OUTSIDE_FIELD3 = parser.get('file_headers', 'OUTSIDE_FIELD3')
-OUTSIDE_FIELDS = tuple([OUTSIDE_FIELD1, OUTSIDE_FIELD2, OUTSIDE_FIELD3])
+GEOSPATIAL_FIELDS = tuple([OUTSIDE_FIELD1, OUTSIDE_FIELD2, OUTSIDE_FIELD3])
 
 OUTSIDE_TIMESTAMP_LABEL = parser.get('file_headers', 'OUTSIDE_TIMESTAMP_LABEL')
 OUTSIDE_DEGREES_LABEL = parser.get('file_headers', 'OUTSIDE_DEGREES_LABEL')
 # Column heading that is unique to outside data file
-UNIQUE_OUTSIDE_FIELD = OUTSIDE_FIELDS[int(parser.get('file_headers', 'UNIQUE_OUTSIDE_FIELD_INDEX'))]
+UNIQUE_GEOSPATIAL_FIELD = GEOSPATIAL_FIELDS[int(parser.get('file_headers', 'UNIQUE_GEOSPATIAL_FIELD_INDEX'))]
 # Ints: 0-based positions of fields in raw files
-OUTSIDE_ID_INDEX = int(parser.get('file_headers', 'OUTSIDE_ID_INDEX'))
-OUTSIDE_LOG_DATE_INDEX = int(parser.get('file_headers', 'OUTSIDE_LOG_DATE_INDEX'))
-OUTSIDE_DEGREES_INDEX = int(parser.get('file_headers', 'OUTSIDE_DEGREES_INDEX'))
+GEOSPATIAL_ID_INDEX = int(parser.get('file_headers', 'GEOSPATIAL_ID_INDEX'))
+GEOSPATIAL_LOG_DATE_INDEX = int(parser.get('file_headers', 'GEOSPATIAL_LOG_DATE_INDEX'))
+GEOSPATIAL_OBSERVATION_INDEX = int(parser.get('file_headers', 'GEOSPATIAL_OBSERVATION_INDEX'))
 
 # Thermostat file metadata file column names
-THERMOSTAT_DEVICE_ID = parser.get('file_headers', 'THERMOSTAT_DEVICE_ID')
-THERMOSTAT_LOCATION_ID = parser.get('file_headers', 'THERMOSTAT_LOCATION_ID')
-THERMOSTAT_ZIP_CODE = parser.get('file_headers', 'THERMOSTAT_ZIP_CODE')
+SENSOR_DEVICE_ID = parser.get('file_headers', 'SENSOR_DEVICE_ID')
+SENSOR_LOCATION_ID = parser.get('file_headers', 'SENSOR_LOCATION_ID')
+SENSOR_ZIP_CODE = parser.get('file_headers', 'SENSOR_ZIP_CODE')
 
 # Postal file containing zip codes and other geographic metadata
 POSTAL_FILE_ZIP = parser.get('file_headers', 'POSTAL_FILE_ZIP')
@@ -112,9 +112,9 @@ else:
     TEST_DIR = parser.get('test_files', 'TEST_DIR')
 
 # Ints
-THERMO_ID1 = int(parser.get('test_ids_and_states', 'THERMO_ID1'))
-THERMO_ID2 = int(parser.get('test_ids_and_states', 'THERMO_ID2'))
-THERMO_IDS = [THERMO_ID1, THERMO_ID2]
+SENSOR_ID1 = int(parser.get('test_ids_and_states', 'SENSOR_ID1'))
+SENSOR_ID2 = int(parser.get('test_ids_and_states', 'SENSOR_ID2'))
+SENSOR_IDS = [SENSOR_ID1, SENSOR_ID2]
 LOCATION_ID1 = int(parser.get('test_ids_and_states', 'LOCATION_ID1'))
 LOCATION_ID2 = int(parser.get('test_ids_and_states', 'LOCATION_ID2'))
 LOCATION_IDS = [LOCATION_ID1, LOCATION_ID2]
@@ -140,8 +140,8 @@ test_pickle_section = 'test_pickle_files'
 if '2.7' in sys.version:
     test_pickle_section += '_py2'
 
-options_vals = ['CYCLES_PICKLE_FILE_OUT', 'INSIDE_PICKLE_FILE_OUT', 'OUTSIDE_PICKLE_FILE_OUT',
-                'CYCLES_PICKLE_FILE', 'INSIDE_PICKLE_FILE', 'OUTSIDE_PICKLE_FILE',
+options_vals = ['CYCLES_PICKLE_FILE_OUT', 'SENSOR_PICKLE_FILE_OUT', 'GEOSPATIAL_PICKLE_FILE_OUT',
+                'CYCLES_PICKLE_FILE', 'SENSOR_PICKLE_FILE', 'GEOSPATIAL_PICKLE_FILE',
                 'ALL_STATES_CYCLES_PICKLED_OUT', 'ALL_STATES_INSIDE_PICKLED_OUT', 'ALL_STATES_OUTSIDE_PICKLED_OUT',
                 'ALL_STATES_CYCLES_PICKLED', 'ALL_STATES_INSIDE_PICKLED', 'ALL_STATES_OUTSIDE_PICKLED']
 
@@ -149,12 +149,12 @@ for option_val in options_vals:
     vars()[option_val] = os.path.join(TEST_DIR, parser.get(test_pickle_section, option_val))
 
 CYCLES_PICKLE_FILE_OUT = vars()['CYCLES_PICKLE_FILE_OUT']
-INSIDE_PICKLE_FILE_OUT = vars()['INSIDE_PICKLE_FILE_OUT']
-OUTSIDE_PICKLE_FILE_OUT = vars()['OUTSIDE_PICKLE_FILE_OUT']
+SENSOR_PICKLE_FILE_OUT = vars()['SENSOR_PICKLE_FILE_OUT']
+GEOSPATIAL_PICKLE_FILE_OUT = vars()['GEOSPATIAL_PICKLE_FILE_OUT']
 
 CYCLES_PICKLE_FILE = vars()['CYCLES_PICKLE_FILE']
-INSIDE_PICKLE_FILE = vars()['INSIDE_PICKLE_FILE']
-OUTSIDE_PICKLE_FILE = vars()['OUTSIDE_PICKLE_FILE']
+SENSOR_PICKLE_FILE = vars()['SENSOR_PICKLE_FILE']
+GEOSPATIAL_PICKLE_FILE = vars()['GEOSPATIAL_PICKLE_FILE']
 
 ALL_STATES_CYCLES_PICKLED_OUT = vars()['ALL_STATES_CYCLES_PICKLED_OUT']
 ALL_STATES_INSIDE_PICKLED_OUT = vars()['ALL_STATES_INSIDE_PICKLED_OUT']

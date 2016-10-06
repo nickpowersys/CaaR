@@ -14,36 +14,36 @@ import pandas as pd
 
 from caar.pandas_tseries_tools import _guess_datetime_format
 
-from caar.configparser_read import INSIDE_FIELDS,                             \
-    OUTSIDE_FIELDS, THERMOSTAT_ZIP_CODE, THERMOSTAT_DEVICE_ID,                \
-    POSTAL_FILE_ZIP, POSTAL_TWO_LETTER_STATE, THERMOSTAT_LOCATION_ID,         \
-    THERMO_ID_FIELD, UNIQUE_CYCLE_FIELD_INDEX, UNIQUE_OUTSIDE_FIELD,          \
+from caar.configparser_read import SENSOR_FIELDS,                             \
+    GEOSPATIAL_FIELDS, SENSOR_ZIP_CODE, SENSOR_DEVICE_ID,                     \
+    POSTAL_FILE_ZIP, POSTAL_TWO_LETTER_STATE, SENSOR_LOCATION_ID,             \
+    SENSOR_ID_FIELD, UNIQUE_CYCLE_FIELD_INDEX, UNIQUE_GEOSPATIAL_FIELD,       \
     CYCLE_TYPE_INDEX, CYCLE_START_INDEX, CYCLE_END_TIME_INDEX,                \
-    INSIDE_LOG_DATE_INDEX, INSIDE_DEGREES_INDEX, INSIDE_ID_INDEX,             \
-    OUTSIDE_LOG_DATE_INDEX, OUTSIDE_DEGREES_INDEX, CYCLE_FIELDS,              \
-    CYCLE_ID_INDEX, OUTSIDE_ID_INDEX
+    SENSORS_LOG_DATE_INDEX, SENSORS_DATA_INDEX, SENSOR_ID_INDEX,              \
+    GEOSPATIAL_LOG_DATE_INDEX, GEOSPATIAL_OBSERVATION_INDEX, CYCLE_FIELDS,    \
+    CYCLE_ID_INDEX, GEOSPATIAL_ID_INDEX
 
 
 from future import standard_library
 standard_library.install_aliases()
 
 
-Cycle = namedtuple('Cycle', ['thermo_id', 'cycle_mode', 'start_time'])
-Inside = namedtuple('Inside', ['thermo_id', 'timestamp'])
-Outside = namedtuple('Outside', ['location_id', 'timestamp'])
+Cycle = namedtuple('Cycle', ['device_id', 'cycle_mode', 'start_time'])
+Sensor = namedtuple('Sensor', ['sensor_id', 'timestamp'])
+Geospatial = namedtuple('Geospatial', ['location_id', 'timestamp'])
 
 
 def dict_from_file(raw_file, cycle=None, states=None,
-                   thermostats_file=None, postal_file=None, auto=None,
+                   sensors_file=None, postal_file=None, auto=None,
                    id_col_heading=None, cycle_col_heading=None, encoding='UTF-8',
                    delimiter=None, quote=None, cols_to_ignore=None, meta=False):
     """Read delimited text file and create dict of dicts. One dict within the dict has the key 'cols_meta' and contains metadata. The other has the key 'records'. The records keys are named 2-tuples containing numeric IDs and time stamps (and cycle mode if a cycle mode is chosen with the argument 'cycle=', for cycling data). The values are either single values (floats, ints or strings) or tuples of these types.
 
     See the example .csv data files at https://github.com/nickpowersys/caar.
 
-    Example thermostat cycle file column headings: ThermostatId, CycleType, StartTime, EndTime.
+    Example sensor cycle file column headings: DeviceId, CycleType, StartTime, EndTime.
 
-    Example inside temperature file column headings: ThermostatId, TimeStamp, Degrees.
+    Example sensor file column headings: SensorId, TimeStamp, Degrees.
 
     Example outside temperature file column headings LocationId, TimeStamp, Degrees.
 
@@ -56,7 +56,7 @@ def dict_from_file(raw_file, cycle=None, states=None,
     starting and ending time stamps for cycles), and (if not cycles) corresponding observations.
 
     To use the automatic column detection functionality, use the keyword argument 'auto' and
-    assign it one of the values: 'cycles', 'inside', or 'outside'.
+    assign it one of the values: 'cycles', 'sensors', or 'geospatial'.
 
     The ID's should contain both letters and digits in some combination (leading zeroes are also
     allowed in place of letters). Having the string 'id', 'Id' or 'ID' will then cause a column
@@ -68,7 +68,7 @@ def dict_from_file(raw_file, cycle=None, states=None,
     comma-delimited string containing state abbreviations. Otherwise, all available records
     will be in the output.
 
-    If a state or states are specified, a thermostats metadata file and postal
+    If a state or states are specified, a sensors metadata file and postal
     code file must be specified in the arguments and have the same location ID columns
     and ZipCode/PostalCode column headings in the same left-to-right order as in the examples.
     For the other columns, dummy values may be used if there is no actual data.
@@ -76,15 +76,15 @@ def dict_from_file(raw_file, cycle=None, states=None,
     Args:
         raw_file (str): The input file.
 
-        cycle (Optional[str]): The type of cycle that will be in the output. For example, two possible values that may be in the data file are 'Cool' and/or 'Heat'.
+        cycle (Optional[str]): The type of cycling operation that will be included in the output. For example, possible values that may be in the data file are 'Cool' or 'Heat'. If no specific value is specified as an argument, all operating modes will be included.
 
         states (Optional[str]): One or more comma-separated, two-letter state abbreviations.
 
-        thermostats_file (Optional[str]): Path of metadata file for thermostats. Required if there is a states argument.
+        sensors_file (Optional[str]): Path of metadata file for sensors. Required if there is a states argument.
 
-        postal_file (Optional[str]): Metadata file for postal codes. Required if there is a states argument.
+        postal_file (Optional[str]): Metadata file for zip codes, with zip codes, their state, and other geographic information. Required if there is a states argument.
 
-        auto (Optional[Boolean]): {'cycles', 'inside', 'outside', None} If one of the data types is specified, the function will detect which columns contain IDs, time stamps and values of interest automatically. If None (default), the order of columns in the delimited file and the config.ini file should match.
+        auto (Optional[Boolean]): {'cycles', 'sensors', 'geospatial', None} If one of the data types is specified, the function will detect which columns contain IDs, time stamps and values of interest automatically. If None (default), the order of columns in the delimited file and the config.ini file should match.
 
         id_col_heading (Optional[str]): Indicates the heading in the header for the ID column.
 
@@ -103,7 +103,7 @@ def dict_from_file(raw_file, cycle=None, states=None,
         clean_dict (dict): Dict.
    """
 
-    kwargs = dict([('states', states), ('thermostats_file', thermostats_file),
+    kwargs = dict([('states', states), ('sensors_file', sensors_file),
                    ('cycle', cycle), ('postal_file', postal_file),
                    ('auto', auto), ('delimiter', delimiter), ('quote', quote),
                    ('meta', meta), ('id_col_heading', id_col_heading),
@@ -116,9 +116,9 @@ def dict_from_file(raw_file, cycle=None, states=None,
 
     if states:
         try:
-            assert kwargs.get('thermostats_file'), kwargs.get('postal_file')
+            assert kwargs.get('sensors_file'), kwargs.get('postal_file')
         except ValueError:
-            _missing_thermostats_or_postal_error_message()
+            _missing_sensors_or_postal_error_message()
 
     header_kwargs = dict([('encoding', encoding), ('delimiter', delimiter),
                           ('id_col_heading', id_col_heading), ('quote', quote),
@@ -145,13 +145,17 @@ def dict_from_file(raw_file, cycle=None, states=None,
 
         records = _dict_from_lines_of_text(raw_file, **kwargs)
 
+        for col, meta in cols_meta.items():
+            if meta['type'] == 'numeric_commas':
+                meta['type'] == 'ints'
+
         container = {'cols_meta': cols_meta, 'records': records}
 
         return container
 
 
 def detect_columns(raw_file, cycle=None, states=None,
-                   thermostats_file=None, postal_file=None, auto=None,
+                   sensors_file=None, postal_file=None, auto=None,
                    encoding='UTF-8', delimiter=None, quote=None,
                    id_col_heading=None, cycle_col_heading=None,
                    cols_to_ignore=None):
@@ -160,15 +164,15 @@ def detect_columns(raw_file, cycle=None, states=None,
     Args:
         raw_file (str): The input file.
 
-        cycle (Optional[str]): The type of cycle that will be in the output. For example, two possible values that may be in the data file are 'Cool' and/or 'Heat'.
+        cycle (Optional[str]): The type of cycle that will be in the output. For example, example values that may be in the data file are 'Cool' and/or 'Heat'. If no specific value is specified as an argument, all modes will be in the output.
 
         states (Optional[str]): One or more comma-separated, two-letter state abbreviations.
 
-        thermostats_file (Optional[str]): Path of metadata file for thermostats. Required if there is a states argument.
+        sensors_file (Optional[str]): Path of metadata file for sensors. Required if there is a states argument.
 
         postal_file (Optional[str]): Metadata file for postal codes. Required if there is a states argument.
 
-        auto (Optional[Boolean]): {'cycles', 'inside', 'outside', None} If one of the data types is specified, the function will detect which columns contain IDs, time stamps and values of interest automatically. If None (default), the order of columns in the delimited file and the config.ini file should match.
+        auto (Optional[Boolean]): {'cycles', 'sensors', 'geospatial', None} If one of the data types is specified, the function will detect which columns contain IDs, time stamps and values of interest automatically. If None (default), the order of columns in the delimited file and the config.ini file should match.
 
         id_col_heading (Optional[str]): Indicates the heading in the header for the ID column.
 
@@ -185,7 +189,7 @@ def detect_columns(raw_file, cycle=None, states=None,
         column_dict (dict): Dict in which keys are one of: 'id_col', 'start_time_col', 'end_time_col', 'cycle_col', (the latter three are for cycles data only), 'time_col', or the headings of other columns found in the file. The values are dicts.
     """
     kwargs = dict([('meta', True), ('cycle', cycle), ('states', states),
-                   ('thermostats_file', thermostats_file),
+                   ('sensors_file', sensors_file),
                    ('postal_file', postal_file), ('auto', auto),
                    ('encoding', encoding), ('delimiter', delimiter),
                    ('quote', quote), ('id_col_heading', id_col_heading),
@@ -211,7 +215,7 @@ def _sort_meta_in_col_order(meta):
 
 
 def pickle_from_file(raw_file, picklepath=None, cycle=None, states=None,
-                     thermostats_file=None, postal_file=None, auto=None,
+                     sensors_file=None, postal_file=None, auto=None,
                      id_col_heading=None, cycle_col_heading=None,
                      cols_to_ignore=None, encoding='UTF-8', delimiter=None,
                      quote=None, meta=False):
@@ -219,11 +223,11 @@ def pickle_from_file(raw_file, picklepath=None, cycle=None, states=None,
 
     See the example .csv data files at https://github.com/nickpowersys/caar.
 
-    Example thermostat cycle file column headings: ThermostatId, CycleType, StartTime, EndTime.
+    Example sensor cycle file column headings: DeviceId, CycleType, StartTime, EndTime.
 
-    Example inside temperature file column headings: ThermostatId, TimeStamp, Degrees.
+    Example sensors file column headings: SensorId, TimeStamp, Degrees.
 
-    Example outside temperature file column headings LocationId, TimeStamp, Degrees.
+    Example geospatial data file column headings LocationId, TimeStamp, Degrees.
 
     Common delimited text file formats including commas, tabs, pipes and spaces are detected in
     that order within the data rows (the header has its own delimiter detection and is handled separately,
@@ -234,7 +238,7 @@ def pickle_from_file(raw_file, picklepath=None, cycle=None, states=None,
     starting and ending time stamps for cycles), and (if not cycles) corresponding observations.
 
     To use the automatic column detection functionality, use the keyword argument 'auto' and
-    assign it one of the values: 'cycles', 'inside', or 'outside'.
+    assign it one of the values: 'cycles', 'sensors', or 'geospatial'.
 
     The ID's should contain both letters and digits in some combination (leading zeroes are also
     allowed in place of letters). Having the string 'id', 'Id' or 'ID' will then cause a column
@@ -246,7 +250,7 @@ def pickle_from_file(raw_file, picklepath=None, cycle=None, states=None,
     comma-delimited string containing state abbreviations. Otherwise, all available records
     will be in the output.
 
-    If a state or states are specified, a thermostats metadata file and postal
+    If a state or states are specified, a sensors metadata file and postal
     code file must be specified in the arguments and have the same location ID columns
     and ZipCode/PostalCode column headings in the same left-to-right order as in the examples.
     For the other columns, dummy values may be used if there is no actual data.
@@ -256,15 +260,15 @@ def pickle_from_file(raw_file, picklepath=None, cycle=None, states=None,
 
         picklepath (str): The path of the desired pickle file. If it is not specified, a filename is generated automatically.
 
-        cycle (Optional[str]): The type of cycle that will be in the output. For example, two possible values that may be in the data file are 'Cool' and/or 'Heat'. If left as None, all cycles will be in the output.
+        cycle (Optional[str]): The type of cycle that will be in the output. For example, example values that may be in the data file are either 'Cool' or 'Heat'. If left as None, all cycles will be in the output.
 
         states (Optional[str]): One or more comma-separated, two-letter state abbreviations.
 
-        thermostats_file (Optional[str]): Path of metadata file for thermostats. Required if there is a states argument.
+        sensors_file (Optional[str]): Path of metadata file for sensors. Required if there is a states argument.
 
         postal_file (Optional[str]): Metadata file for postal codes. Required if there is a states argument.
 
-        auto (Optional[Boolean]): {'cycles', 'inside', 'outside', None} If one of the data types is specified, the function will detect which columns contain IDs, time stamps and values of interest automatically. If None (default), the order and headings of columns in the delimited text file and the config.ini file should match.
+        auto (Optional[Boolean]): {'cycles', 'sensors', 'geospatial', None} If one of the data types is specified, the function will detect which columns contain IDs, time stamps and values of interest automatically. If None (default), the order and headings of columns in the delimited text file and the config.ini file should match.
 
         id_col_heading (Optional[str]): Indicates the heading in the header for the ID column.
 
@@ -285,12 +289,12 @@ def pickle_from_file(raw_file, picklepath=None, cycle=None, states=None,
     """
     if states:
         try:
-            assert thermostats_file is not None, postal_file is not None
+            assert sensors_file is not None, postal_file is not None
         except ValueError:
-            _missing_thermostats_or_postal_error_message()
+            _missing_sensors_or_postal_error_message()
             return 0
 
-    kwargs = dict([('states', states), ('thermostats_file', thermostats_file),
+    kwargs = dict([('states', states), ('sensors_file', sensors_file),
                    ('cycle', cycle), ('postal_file', postal_file),
                    ('auto', auto), ('id_col_heading', id_col_heading),
                    ('cycle_col_heading', cycle_col_heading),
@@ -340,15 +344,15 @@ def _pickle_filename(text_file, states=None, auto=None,
 
 def _dict_from_lines_of_text(raw_file, **kwargs):
     """Returns a tuple containing a dict of column meta-data and a dict of records
-    whose keys and values correspond to 1) indoor temperatures, 2) cooling or heating
-    cycling intervals or 3) outdoor temperatures. The keys of headers_functions are
+    whose keys and values correspond to 1) operating status switching events, 2) sensor data
+    or 3) geospatial data. The keys of headers_functions are
     tuples containing strings with the column headings from the raw text files.
     """
     if kwargs.get('auto'):
         # Detect columns containing ID, cool/heat mode and time automatically
-        data_func_map = {'inside': _clean_inside_auto_detect,
+        data_func_map = {'sensors': _clean_sensors_auto_detect,
                          'cycles': _clean_cycles_auto_detect,
-                         'outside': _clean_outside_auto_detect}
+                         'geospatial': _clean_geospatial_auto_detect}
         data = kwargs.get('auto')
         try:
             cleaning_function = data_func_map[data]
@@ -356,9 +360,9 @@ def _dict_from_lines_of_text(raw_file, **kwargs):
             print('The data type ' + data + ' is not recognized')
     else:
         # Use file definition from config.ini file to specify column headings
-        config_cols_func_map = {INSIDE_FIELDS: _clean_inside,
+        config_cols_func_map = {SENSOR_FIELDS: _clean_sensors,
                                 CYCLE_FIELDS: _clean_cycles,
-                                OUTSIDE_FIELDS: _clean_outside}
+                                GEOSPATIAL_FIELDS: _clean_geospatial}
         header = kwargs.get('header')
 
         try:
@@ -376,7 +380,7 @@ def _clean_cycles_auto_detect(raw_file, **kwargs):
     header, delimiter, cols_meta, cycle_mode, quote, encoding = (kwargs.get(k)
                                                                  for k in args)
     clean_args = [raw_file, header, delimiter, cols_meta]
-    thermos_ids = _thermostats_ids_in_states(**kwargs)
+    thermos_ids = _sensors_ids_in_states(**kwargs)
     clean_kwargs = {'cycle_mode': cycle_mode, 'thermos_ids': thermos_ids,
                     'quote': quote, 'encoding': encoding}
     clean_records = _validate_cycle_records_add_to_dict_auto(*clean_args,
@@ -413,9 +417,9 @@ def _validate_cycle_records_add_to_dict_auto(raw_file, header, delimiter,
                                         dt_format=datetime_format)
                 # Cycle named tuple declaration is global, in order to ensure
                 # that named tuples using it can be pickled.
-                # Cycle = namedtuple('Cycle', ['thermo_id', 'cycle_mode',
+                # Cycle = namedtuple('Cycle', ['device_id', 'cycle_mode',
                 # 'start_time'])
-                multiidcols = Cycle(thermo_id=id_val, cycle_mode=cycle_mode,
+                multiidcols = Cycle(device_id=id_val, cycle_mode=cycle_mode,
                                     start_time=start_dt)
                 end_time_and_other_col_vals = _record_vals(record, data_cols)
                 clean_records[multiidcols] = end_time_and_other_col_vals
@@ -444,22 +448,22 @@ def _validate_cycles_auto_record(record, id_col, ids=None, cycle_mode=None,
                _validate_id(record[id_col], ids)])
 
 
-def _clean_inside_auto_detect(raw_file, **kwargs):
+def _clean_sensors_auto_detect(raw_file, **kwargs):
     args = ['header', 'delimiter', 'cols_meta', 'quote', 'encoding']
     header, delimiter, cols_meta, quote, encoding = (kwargs.get(k)
                                                      for k in args)
     clean_args = [raw_file, header, delimiter, cols_meta]
-    thermos_ids = _thermostats_ids_in_states(**kwargs)
+    thermos_ids = _sensors_ids_in_states(**kwargs)
     clean_kwargs = {'thermos_ids': thermos_ids, 'quote': quote,
                     'encoding': encoding}
-    clean_records = _validate_inside_add_to_dict_auto(*clean_args,
-                                                      **clean_kwargs)
+    clean_records = _validate_sensors_add_to_dict_auto(*clean_args,
+                                                       **clean_kwargs)
     return clean_records
 
 
-def _validate_inside_add_to_dict_auto(raw_file, header, delimiter, cols_meta,
-                                      thermos_ids=None, quote=None,
-                                      encoding=None):
+def _validate_sensors_add_to_dict_auto(raw_file, header, delimiter, cols_meta,
+                                       thermos_ids=None, quote=None,
+                                       encoding=None):
     clean_records = {}
     id_col, time_col = (cols_meta[k]['position'] for k in ['id', 'time'])
     id_is_int = _id_is_int(cols_meta)
@@ -472,15 +476,15 @@ def _validate_inside_add_to_dict_auto(raw_file, header, delimiter, cols_meta,
         _ = lines.readline()
         for line in lines:
             record = _record_from_line(line, delimiter, quote, header)
-            if record and _validate_inside_auto_record(record, id_col,
-                                                       ids=thermos_ids):
-                # Inside named tuple declaration is global, in order to ensure
+            if record and _validate_sensors_auto_record(record, id_col,
+                                                        ids=thermos_ids):
+                # Sensor named tuple declaration is global, in order to ensure
                 # that named tuples using it can be pickled.
-                # Inside = namedtuple('Inside', ['thermo_id', 'timestamp'])
+                # Sensor = namedtuple('Sensor', ['sensor_id', 'timestamp'])
                 id_val = _id_val(record, id_col, id_is_int)
                 time = _to_datetime(record[time_col],
                                     dt_format=datetime_format)
-                multiidcols = Inside(thermo_id=id_val,
+                multiidcols = Sensor(sensor_id=id_val,
                                      timestamp=time)
                 temp_and_other_vals = _record_vals(record, data_cols)
                 clean_records[multiidcols] = temp_and_other_vals
@@ -527,13 +531,13 @@ def _remove_commas_from_int(numeric_string):
     return int(numeric_string.replace(',', ''))
 
 
-def _validate_inside_auto_record(record, id_col, ids=None):
+def _validate_sensors_auto_record(record, id_col, ids=None):
     """Validate that standardized record has expected data content.
     """
     return _validate_id(record[id_col], ids)
 
 
-def _clean_outside_auto_detect(raw_file, **kwargs):
+def _clean_geospatial_auto_detect(raw_file, **kwargs):
     args = ['header', 'delimiter', 'cols_meta', 'quote', 'encoding']
     header, delimiter, cols_meta, quote, encoding = (kwargs.get(k)
                                                      for k in args)
@@ -541,14 +545,14 @@ def _clean_outside_auto_detect(raw_file, **kwargs):
     clean_args = [raw_file, header, delimiter, cols_meta]
     clean_kwargs = {'location_ids': location_ids, 'quote': quote,
                     'encoding': encoding}
-    clean_records = _validate_outside_add_to_dict_auto(*clean_args,
-                                                       **clean_kwargs)
+    clean_records = _validate_geospatial_add_to_dict_auto(*clean_args,
+                                                          **clean_kwargs)
     return clean_records
 
 
-def _validate_outside_add_to_dict_auto(raw_file, header, delimiter, cols_meta,
-                                       location_ids=None, quote=None,
-                                       encoding=None):
+def _validate_geospatial_add_to_dict_auto(raw_file, header, delimiter, cols_meta,
+                                          location_ids=None, quote=None,
+                                          encoding=None):
     clean_records = {}
     id_col, time_col = (cols_meta[k]['position'] for k in ['id', 'time'])
     id_is_int = _id_is_int(cols_meta)
@@ -561,23 +565,23 @@ def _validate_outside_add_to_dict_auto(raw_file, header, delimiter, cols_meta,
         _ = lines.readline()
         for line in lines:
             record = _record_from_line(line, delimiter, quote, header)
-            if record and _validate_outside_auto_record(record, id_col,
-                                                        ids=location_ids):
-                # Outside named tuple declared globally to enable pickling.
+            if record and _validate_geospatial_auto_record(record, id_col,
+                                                           ids=location_ids):
+                # Geospatial named tuple declared globally to enable pickling.
                 # The following is here for reference.
-                # Outside = namedtuple('Outside', ['location_id', 'timestamp'])
+                # Geospatial = namedtuple('Geospatial', ['location_id', 'timestamp'])
                 id_val = _id_val(record, id_col, id_is_int)
                 time = _to_datetime(record[time_col],
                                     dt_format=datetime_format)
-                multiidcols = Outside(location_id=id_val,
-                                      timestamp=time)
+                multiidcols = Geospatial(location_id=id_val,
+                                         timestamp=time)
                 temp_and_other_vals = _record_vals(record, data_cols)
                 clean_records[multiidcols] = temp_and_other_vals
 
     return clean_records
 
 
-def _validate_outside_auto_record(record, id_col, ids=None):
+def _validate_geospatial_auto_record(record, id_col, ids=None):
     """Validate that standardized record has expected data content.
     """
     return _validate_id(record[id_col], ids)
@@ -1120,7 +1124,7 @@ def _header_and_id_col_if_heading_or_preconfig(raw_file, encoding='UTF-8',
                                                cycle=None, delimiter=None,
                                                id_col_heading=None, auto=None,
                                                quote=None, is_postal_file=None,
-                                               is_thermostats_file=None):
+                                               is_sensors_file=None):
     id_col_index = None
 
     with open(raw_file, encoding=encoding) as f:
@@ -1140,7 +1144,7 @@ def _header_and_id_col_if_heading_or_preconfig(raw_file, encoding='UTF-8',
                                          quote=quote)
     header = _parse_line(header, delimiter, quote)
 
-    if is_postal_file or is_thermostats_file:
+    if is_postal_file or is_sensors_file:
         return header, id_col_index
 
     if (id_col_heading is None) and (auto is None):
@@ -1191,9 +1195,9 @@ def _parse_line(line, delimiter, quote):
 
 
 def _id_col_index_for_preconfig_non_auto_file_format(header):
-    config_cols_func_map = {INSIDE_FIELDS: INSIDE_ID_INDEX,
+    config_cols_func_map = {SENSOR_FIELDS: SENSOR_ID_INDEX,
                             CYCLE_FIELDS: CYCLE_ID_INDEX,
-                            OUTSIDE_FIELDS: OUTSIDE_ID_INDEX}
+                            GEOSPATIAL_FIELDS: GEOSPATIAL_ID_INDEX}
     try:
         id_col_index = config_cols_func_map[header]
     except KeyError:
@@ -1364,13 +1368,13 @@ def _character_found_in_line(line, char):
 
 
 def _expected_time_stamps(auto, cycle=None):
-    if auto in ('inside', 'outside'):
+    if auto in ('sensors', 'geospatial'):
         return 1
     elif auto == 'cycles' or cycle:
         return 2
     else:
         raise ValueError('Value of auto argument (\', auto, \') not found.\n  \
-                          Should be \'inside\', \'outside\', or \'cycles\'')
+                          Should be \'sensors\', \'geospatial\', or \'cycles\'')
 
 
 def _minimum_number_of_columns_exist(csv_reader_out, expected_time_stamps=None):
@@ -1421,16 +1425,16 @@ def _determine_quote(line, quote=None):
     return quotech
 
 
-def _thermostats_ids_in_states(**kwargs):
+def _sensors_ids_in_states(**kwargs):
     if kwargs.get('states'):
-        thermostats_ids = (_thermostats_states_df(**kwargs)
-                           .index
-                           .unique()
-                           .ravel()
-                           .astype(np.unicode))
+        sensors_ids = (_sensors_states_df(**kwargs)
+                       .index
+                       .unique()
+                       .ravel()
+                       .astype(np.unicode))
     else:
-        thermostats_ids = None
-    return thermostats_ids
+        sensors_ids = None
+    return sensors_ids
 
 
 def _contains_digits(line):
@@ -1438,20 +1442,20 @@ def _contains_digits(line):
     return bool(digits.search(line))
 
 
-def _missing_thermostats_or_postal_error_message():
-    print('State(s) specified but thermostats and/or postal codes not '
+def _missing_sensors_or_postal_error_message():
+    print('State(s) specified but sensors and/or postal codes not '
           'specified.')
 
 
 # cleanthermo / fixedautohelpers
 
 
-def _thermostats_states_df(**kwargs):
-    """Returns pandas dataframe with thermostat metadata and location
-    information for thermostats in specified states.
+def _sensors_states_df(**kwargs):
+    """Returns pandas dataframe with sensor metadata and location
+    information for sensors in specified states.
     """
-    postal_file, thermostats_file = (kwargs.get(k) for k
-                                     in ['postal_file', 'thermostats_file'])
+    postal_file, sensors_file = (kwargs.get(k) for k
+                                 in ['postal_file', 'sensors_file'])
 
     states = (kwargs.get('states')).split(',')
 
@@ -1459,18 +1463,18 @@ def _thermostats_states_df(**kwargs):
 
     zip_codes_df = _zip_codes_in_states(postal_file, states, auto)
 
-    thermos_df = _thermostats_df(thermostats_file, auto)
+    thermos_df = _sensors_df(sensors_file, auto)
 
-    header_kwargs = {'is_thermostats_file': True}
-    header, _ = _header_and_id_col_if_heading_or_preconfig(thermostats_file,
+    header_kwargs = {'is_sensors_file': True}
+    header, _ = _header_and_id_col_if_heading_or_preconfig(sensors_file,
                                                            **header_kwargs)
 
     zip_heading = _label_of_col_containing_string_lower_upper_title(header, 'zip')
 
-    thermostats_states_df = pd.merge(thermos_df, zip_codes_df, how='inner',
-                                     left_on=zip_heading,
-                                     right_index=True)
-    return thermostats_states_df
+    sensors_states_df = pd.merge(thermos_df, zip_codes_df, how='inner',
+                                 left_on=zip_heading,
+                                 right_index=True)
+    return sensors_states_df
 
 
 def _zip_codes_in_states(postal_file, states, auto):
@@ -1503,13 +1507,13 @@ def _zip_codes_in_states(postal_file, states, auto):
     return zip_codes_df
 
 
-def _thermostats_df(thermostats_file, auto, encoding='UTF-8', delimiter=None):
-    """Returns pandas dataframe of thermostat metadata from raw file."""
-    kwargs = {'encoding': encoding, 'is_thermostats_file': True}
-    header, _ = _header_and_id_col_if_heading_or_preconfig(thermostats_file,
+def _sensors_df(sensors_file, auto, encoding='UTF-8', delimiter=None):
+    """Returns pandas dataframe of sensor metadata from raw file."""
+    kwargs = {'encoding': encoding, 'is_sensors_file': True}
+    header, _ = _header_and_id_col_if_heading_or_preconfig(sensors_file,
                                                            **kwargs)
 
-    sample_records, _, _ = _select_sample_records(thermostats_file, header,
+    sample_records, _, _ = _select_sample_records(sensors_file, header,
                                                   encoding=encoding)
     if auto:
         zip_col = _index_of_col_with_string_in_lower_upper_or_title(header,
@@ -1521,21 +1525,21 @@ def _thermostats_df(thermostats_file, auto, encoding='UTF-8', delimiter=None):
         else:
             id_col = _index_of_col_with_string_in_lower_upper_or_title(header, 'id')
         if id_col is None:
-            raise ValueError('No column found in thermostats file with label '
+            raise ValueError('No column found in sensors file with label '
                              'containing \'id\', \'Id\', or \'ID\'.')
 
         id_col_heading = header[id_col]
     else:
-        zip_col_label = THERMOSTAT_ZIP_CODE
-        id_col_heading = THERMOSTAT_DEVICE_ID
+        zip_col_label = SENSOR_ZIP_CODE
+        id_col_heading = SENSOR_DEVICE_ID
 
-    dtype_thermostat = {zip_col_label: 'str', id_col_heading: 'str'}
-    if os.path.splitext(thermostats_file)[1] == '.csv':
-        thermos_df = pd.read_csv(thermostats_file,
-                                 dtype=dtype_thermostat)
+    dtype_sensor = {zip_col_label: 'str', id_col_heading: 'str'}
+    if os.path.splitext(sensors_file)[1] == '.csv':
+        thermos_df = pd.read_csv(sensors_file,
+                                 dtype=dtype_sensor)
     else:
-        thermos_df = pd.read_table(thermostats_file,
-                                   dtype=dtype_thermostat)
+        thermos_df = pd.read_table(sensors_file,
+                                   dtype=dtype_sensor)
     thermos_df.set_index(keys=id_col_heading, inplace=True)
     thermos_df[zip_col_label] = thermos_df[zip_col_label].str.pad(5, side='left',
                                                                   fillchar='0')
@@ -1562,8 +1566,8 @@ def _index_of_col_with_string_in_lower_upper_or_title(header, string):
 def _locations_in_states(**kwargs):
     """Returns location IDs for locations in specified states."""
     if kwargs.get('states'):
-        thermos_states_df = _thermostats_states_df(**kwargs)
-        location_ids_in_states = (thermos_states_df[THERMOSTAT_LOCATION_ID]
+        thermos_states_df = _sensors_states_df(**kwargs)
+        location_ids_in_states = (thermos_states_df[SENSOR_LOCATION_ID]
                                   .unique()
                                   .ravel()
                                   .astype(np.unicode))
@@ -1579,10 +1583,10 @@ def _data_type_matching_header(header):
     in a text file, where the header is a comma-separated string in which
     each element is itself a string.
     """
-    if THERMO_ID_FIELD in header:
-        data_type = 'inside'
+    if SENSOR_ID_FIELD in header:
+        data_type = 'sensors'
     field_data_mapping = {UNIQUE_CYCLE_FIELD_INDEX: 'cycles',
-                          UNIQUE_OUTSIDE_FIELD: 'outside'}
+                          UNIQUE_GEOSPATIAL_FIELD: 'geospatial'}
     fields_as_keys = set(field_data_mapping.keys())
     field_in_header = set.intersection(fields_as_keys, set(header))
     if len(field_in_header):
@@ -1592,7 +1596,7 @@ def _data_type_matching_header(header):
 
 
 def _clean_cycles(raw_file, **kwargs):
-    """Returns dict for cycling start and end times for thermostats, which may
+    """Returns dict for cycling start and end times for sensors, which may
     be filtered using 'states' parameter, a string that is a comma-separated
     series of state abbreviations.
     """
@@ -1604,7 +1608,7 @@ def _clean_cycles(raw_file, **kwargs):
     id_is_int = _id_is_int(cols_meta)
     data_cols = _non_index_col_types(cols_meta)
     if states:
-        thermos_ids = _thermostats_ids_in_states(**kwargs)
+        thermos_ids = _sensors_ids_in_states(**kwargs)
         with open(raw_file, encoding=kwargs.get('encoding')) as lines:
             _ = lines.readline()
             for line in lines:
@@ -1613,10 +1617,10 @@ def _clean_cycles(raw_file, **kwargs):
                                   cycle=cycle)):
                     # Cycle named tuple declaration is global, in order to ensure
                     # that named tuples using it can be pickled.
-                    # Cycle = namedtuple('Cycle', ['thermo_id', 'cycle_mode',
+                    # Cycle = namedtuple('Cycle', ['device_id', 'cycle_mode',
                     # 'start_time'])
                     id_val = _id_val(record, id_col, id_is_int)
-                    multicols = Cycle(thermo_id=id_val,
+                    multicols = Cycle(device_id=id_val,
                                       cycle_mode=_cycle_type(record),
                                       start_time=_start_cycle(record))
                     clean_records[multicols] = _record_vals(record, data_cols)
@@ -1626,8 +1630,8 @@ def _clean_cycles(raw_file, **kwargs):
     return clean_records
 
 
-def _clean_inside(raw_file, **kwargs):
-    """Returns dict for inside temperatures, which may be filtered using
+def _clean_sensors(raw_file, **kwargs):
+    """Returns dict for sensor data, which may be filtered using
     'states' parameter, a string that is a comma-separated series of state
     abbreviations.
     """
@@ -1640,26 +1644,26 @@ def _clean_inside(raw_file, **kwargs):
     with open(raw_file, encoding=encoding) as lines:
         _ = lines.readline()
         if states:
-            thermos_ids = _thermostats_states_df(**kwargs).index.ravel()
+            thermos_ids = _sensors_states_df(**kwargs).index.ravel()
             for line in lines:
                 record = _record_from_line(line, delimiter, quote, header)
-                if record and all(_validate_inside_record(record,
-                                                          ids=thermos_ids)):
-                    # Inside named tuple declared globally, to enable pickling to
+                if record and all(_validate_sensors_record(record,
+                                                           ids=thermos_ids)):
+                    # Sensor named tuple declared globally, to enable pickling to
                     # work.
-                    # Inside = namedtuple('Inside', ['thermo_id', 'timestamp'])
+                    # Sensor = namedtuple('Sensor', ['sensor_id', 'timestamp'])
                     id_val = _id_val(record, id_col, id_is_int)
-                    multicols = Inside(thermo_id=id_val,
-                                       timestamp=_inside_timestamp(record))
-                    clean_records[multicols] = _inside_degrees(record)
+                    multicols = Sensor(sensor_id=id_val,
+                                       timestamp=_sensor_timestamp(record))
+                    clean_records[multicols] = _sensor_observation(record)
         else:
-            clean_records = _clean_inside_all_states(raw_file, **kwargs)
+            clean_records = _clean_sensors_all_states(raw_file, **kwargs)
 
     return clean_records
 
 
-def _clean_inside_all_states(raw_file, **kwargs):
-    """Returns dict for inside temperatures recorded by thermostats, regardless
+def _clean_sensors_all_states(raw_file, **kwargs):
+    """Returns dict for observations recorded by sensors, regardless
     of state."""
     clean_records = {}
     args = ['header', 'delimiter', 'quote', 'encoding', 'cols_meta']
@@ -1672,19 +1676,18 @@ def _clean_inside_all_states(raw_file, **kwargs):
         for line in lines:
             record = _record_from_line(line, delimiter, quote, header)
             if record:
-                # Cycle named tuple declaration is global, in order to ensure that
+                # Sensor named tuple declaration is global, in order to ensure that
                 # named tuples using it can be pickled.
-                # Cycle = namedtuple('Cycle', ['thermo_id', 'cycle_mode',
-                # 'start_time'])
+                # # Sensor = namedtuple('Sensor', ['sensor_id', 'timestamp'])
                 id_val = _id_val(record, id_col, id_is_int)
-                multicols = Inside(thermo_id=id_val,
-                                   timestamp=_inside_timestamp(record))
-                clean_records[multicols] = _inside_degrees(record)
+                multicols = Sensor(sensor_id=id_val,
+                                   timestamp=_sensor_timestamp(record))
+                clean_records[multicols] = _sensor_observation(record)
 
     return clean_records
 
 
-def _validate_inside_record(record, ids=None):
+def _validate_sensors_record(record, ids=None):
     """Validate that line of text file containing indoor temperatures data
     has expected data content.
     """
@@ -1693,7 +1696,7 @@ def _validate_inside_record(record, ids=None):
 
 
 def _clean_cycles_all_states(raw_file, **kwargs):
-    """Returns dict for cycle start and end times of thermostats, regardless of
+    """Returns dict for cycle start and end times of sensors, regardless of
     state.
     """
     clean_records = {}
@@ -1710,10 +1713,10 @@ def _clean_cycles_all_states(raw_file, **kwargs):
             if record and all(_validate_cycles_record(record, cycle=cycle)):
                 # Cycle named tuple declaration is global, in order to ensure that
                 # named tuples using it can be pickled.
-                # Cycle = namedtuple('Cycle', ['thermo_id', 'cycle_mode',
+                # Cycle = namedtuple('Cycle', ['device_id', 'cycle_mode',
                 # 'start_time'])
                 id_val = _id_val(record, id_col, id_is_int)
-                multicols = Cycle(thermo_id=id_val,
+                multicols = Cycle(device_id=id_val,
                                   cycle_mode=_cycle_type(record),
                                   start_time=_start_cycle(record))
                 clean_records[multicols] = _record_vals(record, data_cols)
@@ -1731,7 +1734,7 @@ def _validate_cycles_record(record, ids=None, cycle=None):
         yield _cycle_type(record) == cycle
 
 
-def _clean_outside(raw_file, **kwargs):
+def _clean_geospatial(raw_file, **kwargs):
     """Returns dict for outdoor temperatures by location, which may be filtered
     using 'states' parameter, a string that is a comma-separated series of
     state abbreviations.
@@ -1748,19 +1751,19 @@ def _clean_outside(raw_file, **kwargs):
             _ = lines.readline()
             for line in lines:
                 record = _record_from_line(line, delimiter, quote, header)
-                if record and all(_validate_outside_record(record,
-                                                           ids=location_ids)):
+                if record and all(_validate_geospatial_record(record,
+                                                              ids=location_ids)):
                     id_val = _id_val(record, id_col, id_is_int)
-                    multicols = Outside(location_id=id_val,
-                                        timestamp=_outside_timestamp(record))
-                    clean_records[multicols] = _outside_degrees(record)
+                    multicols = Geospatial(location_id=id_val,
+                                           timestamp=_geospatial_timestamp(record))
+                    clean_records[multicols] = _geospatial_obs(record)
     else:
-        clean_records = _clean_outside_all_states(raw_file, **kwargs)
+        clean_records = _clean_geospatial_all_states(raw_file, **kwargs)
 
     return clean_records
 
 
-def _clean_outside_all_states(raw_file, **kwargs):
+def _clean_geospatial_all_states(raw_file, **kwargs):
     """Returns dict for outdoor temperatures by location, regardless of
     state.
     """
@@ -1775,13 +1778,13 @@ def _clean_outside_all_states(raw_file, **kwargs):
         for line in lines:
             record = _record_from_line(line, delimiter, quote, header)
             if record:
-                # Outside named tuple declared globally to enable pickling.
+                # Geospatial named tuple declared globally to enable pickling.
                 # The following is here for reference.
-                # Outside = namedtuple('Outside', ['location_id', 'timestamp'])
+                # Geospatial = namedtuple('Geospatial', ['location_id', 'timestamp'])
                 id_val = _id_val(record, id_col, id_is_int)
-                multicols = Outside(location_id=id_val,
-                                    timestamp=_outside_timestamp(record))
-                clean_records[multicols] = _outside_degrees(record)
+                multicols = Geospatial(location_id=id_val,
+                                       timestamp=_geospatial_timestamp(record))
+                clean_records[multicols] = _geospatial_obs(record)
 
     return clean_records
 
@@ -1800,7 +1803,7 @@ def _id_val(record, id_col, id_is_int):
     return id_val
 
 
-def _validate_outside_record(record, ids=None):
+def _validate_geospatial_record(record, ids=None):
     """Validate that line of text file containing outdoor temperatures data
     has expected content.
     """
@@ -1826,8 +1829,8 @@ def _cycle_record_vals(record):
     return record[start:end]
 
 
-def _inside_timestamp(record):
-    timestamp_position = INSIDE_LOG_DATE_INDEX
+def _sensor_timestamp(record):
+    timestamp_position = SENSORS_LOG_DATE_INDEX
     return record[timestamp_position]
 
 
@@ -1838,20 +1841,20 @@ def _numeric_leads(record):
     return True if record[0].isdigit() else False
 
 
-def _inside_degrees(record):
-    degrees_position = INSIDE_DEGREES_INDEX
+def _sensor_observation(record):
+    degrees_position = SENSORS_DATA_INDEX
     return record[degrees_position]
 
 
 def _inside_rec_len(record):
-    return True if len(record) == len(INSIDE_FIELDS) else False
+    return True if len(record) == len(SENSOR_FIELDS) else False
 
 
-def _outside_timestamp(record):
-    timestamp_position = OUTSIDE_LOG_DATE_INDEX
+def _geospatial_timestamp(record):
+    timestamp_position = GEOSPATIAL_LOG_DATE_INDEX
     return record[timestamp_position]
 
 
-def _outside_degrees(record):
-    degrees_position = OUTSIDE_DEGREES_INDEX
+def _geospatial_obs(record):
+    degrees_position = GEOSPATIAL_OBSERVATION_INDEX
     return record[degrees_position]

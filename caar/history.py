@@ -12,56 +12,55 @@ from future import standard_library
 standard_library.install_aliases()
 
 
-Cycle = namedtuple('Cycle', ['thermo_id', 'cycle_mode', 'start_time'])
-Inside = namedtuple('Inside', ['thermo_id', 'timestamp'])
-Outside = namedtuple('Outside', ['location_id', 'timestamp'])
+Cycle = namedtuple('Cycle', ['device_id', 'cycle_mode', 'start_time'])
+Sensor = namedtuple('Sensor', ['sensor_id', 'timestamp'])
+Geospatial = namedtuple('Geospatial', ['location_id', 'timestamp'])
 
 
-def create_inside_df(dict_or_pickle_file, thermo_ids=None):
-    """Returns pandas DataFrame containing thermostat ID, timestamps and
-    inside temperatures at the time of cooling (or heating) cycles starting
-    and ending.
+def create_sensors_df(dict_or_pickle_file, sensor_ids=None):
+    """Returns pandas DataFrame containing sensor ID, timestamps and
+    sensor observations.
 
     Args:
         dict_or_pickle_file (dict or str): The object must have been created with dict_from_file() or pickle_from_file() function.
 
-        thermo_ids (Optional[list or other iterable of ints or strings]): Thermostat IDs. If no argument is specified, all IDs from the first arg will be in the DataFrame.
+        sensor_ids (Optional[list or other iterable of ints or strings]): Sensor IDs. If no argument is specified, all IDs from the first arg will be in the DataFrame.
 
     Returns:
-        inside_df (pandas DataFrame): DataFrame has MultiIndex based on the
+        sensors_df (pandas DataFrame): DataFrame has MultiIndex based on the
         ID(s) and timestamps.
     """
-    fields = list(Inside._fields)
+    fields = list(Sensor._fields)
     multi_ids, vals, meta = _records_as_lists_of_tuples(dict_or_pickle_file,
-                                                        fields, ids=thermo_ids)
+                                                        fields, ids=sensor_ids)
     id_labels = [meta[col]['heading'] for col in ['id', 'time']]
     data_labels = _data_labels_from_meta(meta, id_labels)
-    inside_df = _create_multi_index_df(id_labels, multi_ids, data_labels, vals)
-    return inside_df
+    sensors_df = _create_multi_index_df(id_labels, multi_ids, data_labels, vals)
+    return sensors_df
 
 
-def create_cycles_df(dict_or_pickle_file, thermo_ids=None):
-    """Returns pandas DataFrame containing thermostat ids and cycle beginning
+def create_cycles_df(dict_or_pickle_file, device_ids=None):
+    """Returns pandas DataFrame containing sensor ids and cycle beginning
     timestamps as multi-part indexes, and cycle ending times as values.
 
     Args:
         dict_or_pickle_file (dict or str): Must have been created with dict_from_file() or pickle_from_file() function.
 
-        thermo_ids (Optional[list or other iterable of ints or strings]): Thermostat IDs. If no  argument is specified, all IDs from the first arg will be in the DataFrame.
+        device_ids (Optional[list or other iterable of ints or strings]): Sensor IDs. If no  argument is specified, all IDs from the first arg will be in the DataFrame.
 
     Returns:
         cycles_df (pandas DataFrame): DataFrame has MultiIndex based on the ID(s) and timestamps.
     """
     multi_ids, vals, meta = _records_as_lists_of_tuples(dict_or_pickle_file,
                                                         list(Cycle._fields),
-                                                        ids=thermo_ids)
+                                                        ids=device_ids)
     id_labels = [meta[col]['heading'] for col in ['id', 'cycle', 'start_time']]
     data_labels = _data_labels_from_meta(meta, id_labels)
     cycles_df = _create_multi_index_df(id_labels, multi_ids, data_labels, vals)
     return cycles_df
 
 
-def create_outside_df(dict_or_pickle_file, location_ids=None):
+def create_geospatial_df(dict_or_pickle_file, location_ids=None):
     """Returns pandas DataFrame containing records with location IDs and time
     stamps as multi-part indexes and outdoor temperatures as values.
 
@@ -71,21 +70,21 @@ def create_outside_df(dict_or_pickle_file, location_ids=None):
         location_ids (Optional[list or other iterable of ints or strings]): Location IDs. If no argument is specified, all IDs from the first arg will be in the DataFrame.
 
     Returns:
-        outside_df (pandas DataFrame): DataFrame has MultiIndex based on the ID(s) and timestamps.
+        geospatial_df (pandas DataFrame): DataFrame has MultiIndex based on the ID(s) and timestamps.
     """
     multi_ids, vals, meta = _records_as_lists_of_tuples(dict_or_pickle_file,
-                                                        list(Outside._fields),
+                                                        list(Geospatial._fields),
                                                         ids=location_ids)
     id_labels = [meta[col]['heading'] for col in ['id', 'time']]
     data_labels = _data_labels_from_meta(meta, id_labels)
-    outside_df = _create_multi_index_df(id_labels, multi_ids, data_labels, vals)
-    return outside_df
+    geospatial_df = _create_multi_index_df(id_labels, multi_ids, data_labels, vals)
+    return geospatial_df
 
 
 def _records_as_lists_of_tuples(dict_or_pickle_file, fields,
                                 ids=None):
     """Returns tuple containing
-    1) a list of named tuples containing thermostat (or outdoor location) ids
+    1) a list of named tuples containing sensor (or outdoor location) ids
     and timestamps and
     2) a list of either indoor (or outdoor) temperatures, or the ending time
     of a cycle, based on input of a pickle file containing a dict.

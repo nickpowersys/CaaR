@@ -3,7 +3,7 @@ import datetime as dt
 import numpy as np
 import pandas as pd
 
-from caar.configparser_read import THERMOSTAT_DEVICE_ID, THERMOSTAT_LOCATION_ID
+from caar.configparser_read import SENSOR_DEVICE_ID, SENSOR_LOCATION_ID
 
 from future import standard_library
 standard_library.install_aliases()
@@ -31,8 +31,8 @@ def days_of_data_by_id(df):
     return days_data_df
 
 
-def consecutive_days_of_observations(id, thermostats_file, cycles_df,
-                                     inside_df, outside_df=None):
+def consecutive_days_of_observations(id, devices_file, cycles_df,
+                                     sensors_df, geospatial_df=None):
     """
     Returns a pandas DataFrame with a row for each date range indicating the
     number of consecutive days of data across all DataFrames given as
@@ -40,24 +40,24 @@ def consecutive_days_of_observations(id, thermostats_file, cycles_df,
     Only days in which all data types have one or more observations are included.
 
     Args:
-        id (int): The ID of the thermostat.
+        id (int or str): The ID of the device.
 
-        thermostats_file(str): Path of thermostats file.
+        devices_file(str): Path of devices file.
 
         cycles_df (pandas DataFrame): DataFrame as created by **history** module.
 
-        inside_df (pandas DataFrame): DataFrame as created by **history** module.
+        sensors_df (pandas DataFrame): DataFrame as created by **history** module.
 
-        outside_df (Optional[pandas DataFrame]): DataFrame as created by **history** module.
+        geospatial_df (Optional[pandas DataFrame]): DataFrame as created by **history** module.
 
     Returns:
         consecutive_days_df (pandas DataFrame): DataFrame with 'First Day',
         'Last Day', and count ('Consecutive Days') for each set of consecutive
         days, for the specified ID.
     """
-    obs_counts = daily_cycle_and_temp_obs_counts(id, thermostats_file,
-                                                 cycles_df, inside_df,
-                                                 outside_df=outside_df)
+    obs_counts = daily_cycle_and_temp_obs_counts(id, devices_file,
+                                                 cycles_df, sensors_df,
+                                                 geospatial_df=geospatial_df)
     streaks = []
     streak_days = 0
     one_day = pd.Timedelta(days=1)
@@ -88,59 +88,56 @@ def consecutive_days_of_observations(id, thermostats_file, cycles_df,
     return streaks_df
 
 
-def daily_cycle_and_temp_obs_counts(id, thermostats_file, cycles_df, inside_df,
-                                    outside_df=None):
+def daily_cycle_and_temp_obs_counts(id, devices_file, cycles_df, sensors_df,
+                                    geospatial_df=None):
     """Returns a pandas DataFrame with the count of observations of each type
-    of data given in the arguments (cycles, temperatures, outside
-    temperatures), by day. Only days in which all data types have one or more
+    of data given in the arguments (cycles, sensor observations, geospatial
+    observations), by day. Only days in which all data types have one or more
     observations are included.
 
     Args:
-        id (int): The ID of the thermostat.
+        id (int or str): The ID of the device.
 
-        thermostats_file(str): Path of thermostats file.
+        devices_file(str): Path of devices file.
 
         cycles_df (pandas DataFrame): DataFrame as created by **history** module.
 
-        inside_df (pandas DataFrame): DataFrame as created by **history** module.
+        sensors_df (pandas DataFrame): DataFrame as created by **history** module.
 
-        outside_df (Optional[pandas DataFrame]): DataFrame as created by **history** module.
+        geospatial_df (Optional[pandas DataFrame]): DataFrame as created by **history** module.
 
     Returns:
         daily_obs_df (pandas DataFrame): DataFrame with index of the date, and
-        values of 'Cycles_obs', 'Inside_obs', and 'Outside_obs'.
+        values of 'Cycles_obs', 'Sensors_obs', and 'Geospatial_obs'.
     """
-    idx = pd.IndexSlice
-    cycles = cycles_df.loc[idx[id, :, :], :]
-    inside = inside_df.loc[idx[id, :], :]
-    outside_data = True if isinstance(outside_df, pd.DataFrame) else False
-    if outside_data:
-        location_id = location_id_of_thermo(id, thermostats_file)
-        outside_records = outside_df.loc[idx[location_id, :], :]
-        df_list = [cycles, inside, outside_records]
+    cycles = _slice_by_single_index(cycles_df, id_index=id)
+    sensor = _slice_by_single_index(sensors_df, id_index=id)
+    geospatial_data = True if isinstance(geospatial_df, pd.DataFrame) else False
+    if geospatial_data:
+        location_id = location_id_of_sensor(id, devices_file)
+        geospatial_records = _slice_by_single_index(geospatial_df,
+                                                    id_index=location_id)
+        df_list = [cycles, sensor, geospatial_records]
     else:
-        df_list = [cycles, inside]
+        df_list = [cycles, sensor]
     # Get df's with number of observation by day, for each of 3 types of data
     dfs = [daily_data_points_by_id(df) for df in df_list]
-    if outside_data:
-        cycles, inside, outside = (df.set_index(df.index.droplevel())
+    if geospatial_data:
+        cycles, sensor, geospatial = (df.set_index(df.index.droplevel())
                                    for df in dfs)
     else:
-        cycles, inside = (df.set_index(df.index.droplevel()) for df in dfs)
+        cycles, sensor = (df.set_index(df.index.droplevel()) for df in dfs)
     cycles_time = _get_time_index_column_label(cycles_df)
-    cycles_inside = pd.merge(cycles, inside, left_index=cycles_time,
-                             right_index=True, how='inner')
+    cycles_sensors = pd.merge(cycles, sensor, left_index=cycles_time,
+                              right_index=True, how='inner')
     cycle_end_time = _get_time_label_of_data(cycles_df)
-    if outside_data:
-        outside_time_label = _get_time_index_column_label(outside_df)
-        return (pd.merge(cycles_inside, outside, left_index=True,
-                         right_index=outside_time_label)
-                .rename(columns={cycle_end_time: 'Cycles_obs',
-                                 'Degrees_x': 'Inside_obs',
-                                 'Degrees_y': 'Outside_obs'}))
+    if geospatial_data:
+        geospatial_time_heading = _get_time_index_column_label(geospatial_df)
+        return (pd.merge(cycles_sensors, geospatial, left_index=True,
+                         right_index=geospatial_time_heading)
+                 .rename(columns={cycle_end_time: 'Cycles_obs'}))
     else:
-        return cycles_inside.rename(columns={cycle_end_time: 'Cycles_obs',
-                                             'Degrees': 'Inside_obs'})
+        return cycles_sensors.rename(columns={cycle_end_time: 'Cycles_obs'})
 
 
 def daily_data_points_by_id(df, id=None):
@@ -150,7 +147,7 @@ def daily_data_points_by_id(df, id=None):
     Args:
         df (pandas DataFrame): DataFrame as created by **history** module.
 
-        id (Optional[int]): The ID of a thermostat.
+        id (Optional[int or str]): The ID of a device.
 
     Returns:
         daily_obs_df (pandas DataFrame): DataFrame indexed by date, and
@@ -159,26 +156,22 @@ def daily_data_points_by_id(df, id=None):
     # 1) Groups the DataFrame by the primary ID and by time.
     # 2) Gives count of records within groups.
     if id is not None:
-        idx = pd.IndexSlice
-        if _has_double_index(df):
-            df = df.loc[idx[id, :], :]
-        elif _has_triple_index(df):
-            df = df.loc[idx[id, :, :], :]
-    time_index_level = _get_time_level_of_df_multiindex(df)
+        df = _slice_by_single_index(df, id_index=id)
+    time_level = _get_time_level_of_df_multiindex(df)
     daily_df = (df.groupby([df.index.get_level_values(level=0),
-                            pd.TimeGrouper('D', level=time_index_level)])
+                            pd.TimeGrouper('D', level=time_level)])
                 .count())
     return daily_df
 
 
 def df_select_ids(df, id_or_ids):
     """Returns pandas DataFrame that is restricted to a particular ID or IDs
-    (thermostat ID, or location ID in the case of outside temperatures).
+    (device ID, or location ID in the case of geospatial data).
 
     Args:
         df (pandas DataFrame): DataFrame that has been created by a function in the **history** or **histsummary** modules (it must have a numeric ID as the first or only index column).
 
-        id_or_ids (int, list of ints, or tuple): A tuple should have the form (min_ID, max_ID)
+        id_or_ids (int or str, list of ints or strs, or tuple): A tuple should have the form (min_ID, max_ID)
 
     Returns:
         daily_obs (pandas DataFrame)
@@ -245,13 +238,13 @@ def _has_triple_index(df):
 
 def _slice_by_one_index_in_triple_index(df, id_index=None, middle_index=None,
                                         time_index=None):
-    idx = pd.IndexSlice
     index = [index for index in [id_index, middle_index, time_index] if index]
 
     if len(index) > 1:
         raise ValueError('More than one index slice has been chosen. '
                          'This is not yet supported by this function.')
 
+    idx = pd.IndexSlice
     if id_index:
         idx_arg = _slice_by_id_in_triple_index(id_index)
 
@@ -260,6 +253,9 @@ def _slice_by_one_index_in_triple_index(df, id_index=None, middle_index=None,
 
     elif middle_index:
         idx_arg = idx[:, middle_index, :]
+
+    else:
+        idx_arg = idx[:, :, :]
 
     sliced_by_one = pd.DataFrame(df.loc[idx_arg, :])
     sliced_by_one.sortlevel(inplace=True, sort_remaining=True)
@@ -330,8 +326,14 @@ def _slice_by_time_in_triple_index(time_index):
 def _slice_by_one_index_in_single_index(df, id_index=None, time_index=None):
     if id_index:
         idx_arg = _slice_by_id_in_single_index(id_index)
+
     elif time_index:
         idx_arg = _slice_by_time_in_single_index(time_index)
+
+    else:
+        idx = pd.IndexSlice
+        idx_arg = idx[:]
+
     sliced_by_one = pd.DataFrame(df.loc[idx_arg, :])
     sliced_by_one.sortlevel(inplace=True, sort_remaining=True)
 
@@ -350,6 +352,10 @@ def _slice_by_one_index_in_double_index(df, id_index=None, time_index=None):
 
     elif time_index:
         idx_arg = _slice_by_time_in_double_index(time_index)
+
+    else:
+        idx = pd.IndexSlice
+        idx_arg = idx[:, :]
 
     sliced_by_one = pd.DataFrame(df.loc[idx_arg, :])
     sliced_by_one.sortlevel(inplace=True, sort_remaining=True)
@@ -379,13 +385,13 @@ def count_of_data_points_for_each_id(df):
 
 
 def count_of_data_points_for_select_id(df, id):
-    """Returns number of observations for the specified thermostat or location
+    """Returns number of observations for the specified device or location
     within a DataFrame.
 
     Args:
-        id (int): ID of thermostat or location.
-
         df (pandas DataFrame): DataFrame as created by **history** module.
+
+        id (int or str): ID of device or location.
 
     Returns:
         data_points (int): Number of observations for the given ID in the DataFrame.
@@ -394,27 +400,35 @@ def count_of_data_points_for_select_id(df, id):
     return df.loc[idx[id, :], :].count()
 
 
-def location_id_of_thermo(thermo_id, thermostats_file):
-    """Returns location ID for a thermostat, based on thermostat ID.
+def location_id_of_sensor(sensor_id, devices_file):
+    """Returns location ID for a device, based on device ID.
 
     Args:
-        thermo_id (int): Thermostat ID.
+        sensor_id (int or str): Device ID.
 
-        thermostats_file (str): Thermostats file.
+        devices_file (str): Devices file.
 
     Returns:
         location_id (int): Location ID.
     """
-    thermostat_df = pd.read_csv(thermostats_file,
-                                usecols=[str(THERMOSTAT_DEVICE_ID),
-                                         str(THERMOSTAT_LOCATION_ID)],
-                                index_col=0)
+    device_df = pd.read_csv(devices_file,
+                            usecols=[str(SENSOR_DEVICE_ID),
+                                     str(SENSOR_LOCATION_ID)],
+                            index_col=0)
     idx = pd.IndexSlice
-    return thermostat_df.loc[idx[thermo_id, THERMOSTAT_LOCATION_ID]]
+    return device_df.loc[idx[sensor_id, SENSOR_LOCATION_ID]]
 
 
 def _get_id_index_column_label(df):
     return df.index.names[0]
+
+
+def _get_time_index(df):
+    time_level = _get_time_level_of_df_multiindex(df)
+    timestamps = (df
+                  .index
+                  .get_level_values(time_level))
+    return timestamps
 
 
 def _get_time_index_column_label(df):
@@ -459,17 +473,26 @@ def _get_column_of_data_label(df, label):
     for i, col_label in enumerate(df.columns):
         if col_label == label:
             break
-    return i
+    if df.iloc[0, i].__class__ != str:
+        return [i]
+    else:
+        msg = ('The column ', label, ' contains strings instead of '
+               'numeric values. You may want to change it to Categorical '
+               ' in pandas, if it represents a category.')
+        raise ValueError(msg)
 
 
 def _sliced_by_id_or_ids_and_time_index(df, id_or_ids, start, end):
-    sliced_by_id = _slice_by_single_index(df, id_index=id_or_ids)
+    if id_or_ids:
+        sliced_by_id = _slice_by_single_index(df, id_index=id_or_ids)
+    else:
+        sliced_by_id = df
     sliced_by_dt = _slice_by_single_index(sliced_by_id, time_index=(start, end))
     return sliced_by_dt
 
 
 def squared_avg_daily_data_points_per_id(df):
-    """ Returns DataFrame grouped by the primary id (ThermostatId or
+    """ Returns DataFrame grouped by the primary id (DeviceId or
     LocationId) and by day. The value column has the count of data points
     per day.
     """
@@ -500,14 +523,14 @@ def counts_by_primary_id_squared(df):
             .to_dict())
 
 
-def first_full_day_of_inside_temperature_data(df):
+def first_full_day_of_sensors_obs(df):
     earliest_minute = df.index.get_level_values(level=4).min()
     first_full_day = dt.datetime(earliest_minute.year, earliest_minute.month,
                                  earliest_minute.day + 1, hour=0, minute=0)
     return first_full_day
 
 
-def last_full_day_of_inside_temperature_data(df):
+def last_full_day_of_sensors_obs(df):
     last_minute = df.index.get_level_values(level=4).max()
     last_full_day = dt.datetime(last_minute.year, last_minute.month,
                                 last_minute.day - 1, hour=0, minute=0)
@@ -515,8 +538,8 @@ def last_full_day_of_inside_temperature_data(df):
 
 
 def first_and_last_days_cycling(df):
-    return (first_full_day_of_inside_temperature_data(df),
-            last_full_day_of_inside_temperature_data(df))
+    return (first_full_day_of_sensors_obs(df),
+            last_full_day_of_sensors_obs(df))
 
 
 def number_of_days(df):
@@ -560,7 +583,7 @@ def first_and_last_days_df(df):
             start_of_last_full_day_df(df))
 
 
-def date_range_for_data(first_day, last_day, frequency='m'):
+def number_of_intervals_in_date_range(first_day, last_day, frequency='m'):
     """Returns number of intervals of specified frequency for date
     range from first to last full days of data.
     Default frequency is in minutes ('m').
@@ -570,9 +593,9 @@ def date_range_for_data(first_day, last_day, frequency='m'):
     return intervals
 
 
-def count_inside_temp_by_thermo_id(df):
-    """Returns the total number of inside temperature readings for each
-    thermostat within the DataFrame.
+def count_observations_by_sensor_id(df):
+    """Returns the total number of readings for each
+    sensor within the DataFrame.
     """
     device_id_label = _get_id_index_column_label(df)
     data_field_labels = _get_labels_of_data_columns(df)
@@ -586,14 +609,14 @@ def count_inside_temp_by_thermo_id(df):
     return count_by_id_arr
 
 
-def count_inside_temps_in_intervals_for_thermo_id(df, id, interval='D'):
-    """Returns the count of inside temperature readings for a thermostat by
+def count_observations_in_intervals_for_sensor_id(df, id, interval='D'):
+    """Returns the count of inside temperature readings for a device by
     interval (defaults to daily).
 
     Args:
         df (pandas DataFrame): DataFrame as created by **history** module.
 
-        id (int): ID of thermostat.
+        id (int): ID of device.
 
         interval (str): interval (pandas format). Defaults to daily.
 
