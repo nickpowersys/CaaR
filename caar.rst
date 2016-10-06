@@ -10,7 +10,7 @@ caar.cleanthermostat module
 .. automodule:: caar.cleanthermostat
     :members:
     :no-undoc-members:
-    :exclude-members: Cycle, Sensors, Geospatial
+    :exclude-members: Cycle, Sensor, Geospatial
     :show-inheritance:
 
 caar.history module
@@ -19,7 +19,7 @@ caar.history module
 .. automodule:: caar.history
     :members:
     :no-undoc-members:
-    :exclude-members: Cycle, Sensors, Geospatial
+    :exclude-members: Cycle, Sensor, Geospatial
     :show-inheritance:
 
 caar.histsummary module
