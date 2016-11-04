@@ -1,2 +1,3 @@
 Id,LocationId,AcTons,AcSeer,AcKilowatts,FanKilowatts,HeatBtuPerHour,ZipCode,ElectricityPrice,HeatFuelPrice,Timezone
 92,81,3,10,3.6,0,100000,38772,13,10,-6
+124,112,4,14,3,0,100000,76034,8,10,-6
