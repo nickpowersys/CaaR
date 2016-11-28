@@ -16,8 +16,8 @@ from caar import timeseries as ts
 from caar.configparser_read import TEST_CYCLES_FILE, CYCLES_PICKLE_FILE_OUT,   \
     CYCLES_PICKLE_FILE, SENSOR_IDS, SENSOR_PICKLE_FILE_OUT, SENSOR_PICKLE_FILE,\
     GEOSPATIAL_PICKLE_FILE_OUT, GEOSPATIAL_PICKLE_FILE, LOCATION_IDS,          \
-    TEST_THERMOSTATS_FILE, STATE, TEST_POSTAL_FILE, CYCLE_TYPE_COOL,           \
-    TEST_INSIDE_FILE, TEST_OUTSIDE_FILE, ALL_STATES_CYCLES_PICKLED_OUT,        \
+    TEST_SENSORS_FILE, STATE, TEST_POSTAL_FILE, CYCLE_TYPE_COOL,           \
+    TEST_SENSOR_OBS_FILE, TEST_GEOSPATIAL_OBS_FILE, ALL_STATES_CYCLES_PICKLED_OUT,        \
     ALL_STATES_INSIDE_PICKLED_OUT, ALL_STATES_OUTSIDE_PICKLED_OUT, SENSOR_ID1, \
     LOCATION_ID1
 
@@ -51,20 +51,20 @@ def cycle_df_fixture():
 
 @slow
 @pytest.fixture(scope="module")
-def inside_df_fixture():
+def sensor_df_fixture():
     return hi.create_sensors_df(SENSOR_PICKLE_FILE, sensor_ids=SENSOR_IDS)
 
 
 @slow
 @pytest.fixture(scope="module")
-def outside_df_fixture():
+def geospatial_df_fixture():
     return hi.create_geospatial_df(GEOSPATIAL_PICKLE_FILE, location_ids=LOCATION_IDS)
 
 
 @slow
 @pytest.fixture(scope="module")
 def sensors_fixture():
-    return TEST_THERMOSTATS_FILE
+    return TEST_SENSORS_FILE
 
 
 @slow
@@ -80,18 +80,18 @@ def state_fixture():
 
 @slow
 @pytest.mark.parametrize("data_file, states, sensors, postal, cycle, auto",
-                          [(TEST_CYCLES_FILE, STATE, TEST_THERMOSTATS_FILE,
-                           TEST_POSTAL_FILE, CYCLE_TYPE_COOL, 'cycles'),
+                          [(TEST_CYCLES_FILE, STATE, TEST_SENSORS_FILE,
+                            TEST_POSTAL_FILE, CYCLE_TYPE_COOL, 'cycles'),
                            (TEST_CYCLES_FILE, None, None, None, CYCLE_TYPE_COOL,
                            'cycles'),
-                           (TEST_INSIDE_FILE, STATE, TEST_THERMOSTATS_FILE,
-                           TEST_POSTAL_FILE, None, 'sensors'),
-                           (TEST_INSIDE_FILE, None, None, None, None,
+                           (TEST_SENSOR_OBS_FILE, STATE, TEST_SENSORS_FILE,
+                            TEST_POSTAL_FILE, None, 'sensors'),
+                           (TEST_SENSOR_OBS_FILE, None, None, None, None,
                            'sensors'),
-                           (TEST_OUTSIDE_FILE, STATE, TEST_THERMOSTATS_FILE,
-                           TEST_POSTAL_FILE, None, 'geospatial'),
-                           (TEST_OUTSIDE_FILE, None, None, None,
-                           None, 'geospatial')])
+                           (TEST_GEOSPATIAL_OBS_FILE, STATE, TEST_SENSORS_FILE,
+                            TEST_POSTAL_FILE, None, 'geospatial'),
+                           (TEST_GEOSPATIAL_OBS_FILE, None, None, None,
+                            None, 'geospatial')])
 def test_select_clean_auto(data_file, states, sensors, postal, cycle, auto):
     clean_dict = ct.dict_from_file(data_file, cycle=cycle, states=states,
                                    sensors_file=sensors,
@@ -104,9 +104,9 @@ def test_select_clean_auto(data_file, states, sensors, postal, cycle, auto):
 @pytest.mark.parametrize("data_file, states, sensors, postal, cycle, auto",
                          [(TEST_CYCLES_FILE, None, None, None, CYCLE_TYPE_COOL,
                            'cycles'),
-                          (TEST_INSIDE_FILE, None, None, None, None,
+                          (TEST_SENSOR_OBS_FILE, None, None, None, None,
                            'sensors'),
-                          (TEST_OUTSIDE_FILE, None, None, None,
+                          (TEST_GEOSPATIAL_OBS_FILE, None, None, None,
                            None, 'geospatial')])
 def test_col_meta_auto(data_file, states, sensors, postal, cycle, auto):
     col_meta = ct.dict_from_file(data_file, cycle=cycle, states=states,
@@ -118,15 +118,15 @@ def test_col_meta_auto(data_file, states, sensors, postal, cycle, auto):
 
 @slow
 @pytest.mark.parametrize("data_file, states, sensors, postal, cycle, auto",
-                         [(TEST_CYCLES_FILE, STATE, TEST_THERMOSTATS_FILE,
+                         [(TEST_CYCLES_FILE, STATE, TEST_SENSORS_FILE,
                            TEST_POSTAL_FILE, CYCLE_TYPE_COOL, None),
                           (TEST_CYCLES_FILE, None, None, None, CYCLE_TYPE_COOL, None),
-                          (TEST_INSIDE_FILE, STATE, TEST_THERMOSTATS_FILE,
+                          (TEST_SENSOR_OBS_FILE, STATE, TEST_SENSORS_FILE,
                            TEST_POSTAL_FILE, None, None),
-                          (TEST_INSIDE_FILE, None, None, None, None, None),
-                          (TEST_OUTSIDE_FILE, STATE, TEST_THERMOSTATS_FILE,
+                          (TEST_SENSOR_OBS_FILE, None, None, None, None, None),
+                          (TEST_GEOSPATIAL_OBS_FILE, STATE, TEST_SENSORS_FILE,
                            TEST_POSTAL_FILE, None, None),
-                          (TEST_OUTSIDE_FILE, None, None, None,
+                          (TEST_GEOSPATIAL_OBS_FILE, None, None, None,
                            None, None)])
 def test_select_clean(data_file, states, sensors, postal, cycle, auto):
     clean_dict = ct.dict_from_file(data_file, cycle=cycle, states=states,
@@ -140,16 +140,16 @@ def test_select_clean(data_file, states, sensors, postal, cycle, auto):
 @pytest.mark.parametrize("tempdir, data_file, cycle, states_to_clean, "
                          "expected_path, sensors, postal, auto, encoding",
                          [(tmpdir(), TEST_CYCLES_FILE, CYCLE_TYPE_COOL, STATE, CYCLES_PICKLE_FILE_OUT,
-                           TEST_THERMOSTATS_FILE, TEST_POSTAL_FILE, 'cycles', 'UTF-8'),
+                           TEST_SENSORS_FILE, TEST_POSTAL_FILE, 'cycles', 'UTF-8'),
                           (tmpdir(), TEST_CYCLES_FILE, CYCLE_TYPE_COOL, None, ALL_STATES_CYCLES_PICKLED_OUT,
                            None, None, 'cycles', 'UTF-8'),
-                          (tmpdir(), TEST_INSIDE_FILE, None, STATE, SENSOR_PICKLE_FILE_OUT,
-                           TEST_THERMOSTATS_FILE, TEST_POSTAL_FILE, 'sensors', 'UTF-8'),
-                          (tmpdir(), TEST_INSIDE_FILE, None, None, ALL_STATES_INSIDE_PICKLED_OUT,
+                          (tmpdir(), TEST_SENSOR_OBS_FILE, None, STATE, SENSOR_PICKLE_FILE_OUT,
+                           TEST_SENSORS_FILE, TEST_POSTAL_FILE, 'sensors', 'UTF-8'),
+                          (tmpdir(), TEST_SENSOR_OBS_FILE, None, None, ALL_STATES_INSIDE_PICKLED_OUT,
                            None, None, 'sensors', 'UTF-8'),
-                          (tmpdir(), TEST_OUTSIDE_FILE, None, STATE, GEOSPATIAL_PICKLE_FILE_OUT,
-                           TEST_THERMOSTATS_FILE, TEST_POSTAL_FILE, 'geospatial', 'UTF-8'),
-                          (tmpdir(), TEST_OUTSIDE_FILE, None, None, ALL_STATES_OUTSIDE_PICKLED_OUT,
+                          (tmpdir(), TEST_GEOSPATIAL_OBS_FILE, None, STATE, GEOSPATIAL_PICKLE_FILE_OUT,
+                           TEST_SENSORS_FILE, TEST_POSTAL_FILE, 'geospatial', 'UTF-8'),
+                          (tmpdir(), TEST_GEOSPATIAL_OBS_FILE, None, None, ALL_STATES_OUTSIDE_PICKLED_OUT,
                            None, None, 'geospatial', 'UTF-8')])
 def test_pickle_cycles_inside_outside(tempdir, data_file, cycle, states_to_clean, expected_path,
                                       sensors, postal, auto, encoding):
@@ -181,20 +181,20 @@ def test_df_creation(pickle_file, df_creation_func, id_type, ids):
 
 @slow
 @pytest.mark.parametrize("data_file, states, sensors, postal, cycle, auto, df_creation_func, id_type, ids",
-                         [(TEST_CYCLES_FILE, STATE, TEST_THERMOSTATS_FILE,
+                         [(TEST_CYCLES_FILE, STATE, TEST_SENSORS_FILE,
                            TEST_POSTAL_FILE, CYCLE_TYPE_COOL, 'cycles', hi.create_cycles_df,
                            'device_ids', [SENSOR_ID1]),
                           (TEST_CYCLES_FILE, None, None, None, CYCLE_TYPE_COOL,
                            'cycles', hi.create_cycles_df, None, None),
-                          (TEST_INSIDE_FILE, STATE, TEST_THERMOSTATS_FILE,
+                          (TEST_SENSOR_OBS_FILE, STATE, TEST_SENSORS_FILE,
                            TEST_POSTAL_FILE, None, 'sensors', hi.create_sensors_df,
                            'sensor_ids', [SENSOR_ID1]),
-                          (TEST_INSIDE_FILE, None, None, None, None,
+                          (TEST_SENSOR_OBS_FILE, None, None, None, None,
                            'sensors', hi.create_sensors_df, None, None),
-                          (TEST_OUTSIDE_FILE, STATE, TEST_THERMOSTATS_FILE,
+                          (TEST_GEOSPATIAL_OBS_FILE, STATE, TEST_SENSORS_FILE,
                            TEST_POSTAL_FILE, None, 'geospatial', hi.create_geospatial_df,
                            'location_ids', [LOCATION_ID1]),
-                          (TEST_OUTSIDE_FILE, None, None, None,
+                          (TEST_GEOSPATIAL_OBS_FILE, None, None, None,
                            None, 'geospatial', hi.create_geospatial_df, None, None)])
 def test_df_creation_after_dict(data_file, states, sensors, postal, cycle, auto, df_creation_func, id_type, ids):
     clean_dict = ct.dict_from_file(data_file, cycle=cycle, states=states,
@@ -212,20 +212,20 @@ def test_df_creation_after_dict(data_file, states, sensors, postal, cycle, auto,
 
 @slow
 @pytest.mark.parametrize("data_file, states, sensors, postal, cycle, df_creation_func, id_type, ids",
-                         [(TEST_CYCLES_FILE, STATE, TEST_THERMOSTATS_FILE,
+                         [(TEST_CYCLES_FILE, STATE, TEST_SENSORS_FILE,
                            TEST_POSTAL_FILE, CYCLE_TYPE_COOL, hi.create_cycles_df,
                            'device_ids', [SENSOR_ID1]),
                           (TEST_CYCLES_FILE, None, None, None, CYCLE_TYPE_COOL,
                            hi.create_cycles_df, None, None),
-                          (TEST_INSIDE_FILE, STATE, TEST_THERMOSTATS_FILE,
+                          (TEST_SENSOR_OBS_FILE, STATE, TEST_SENSORS_FILE,
                            TEST_POSTAL_FILE, None, hi.create_sensors_df,
                            'sensor_ids', [SENSOR_ID1]),
-                          (TEST_INSIDE_FILE, None, None, None, None,
+                          (TEST_SENSOR_OBS_FILE, None, None, None, None,
                            hi.create_sensors_df, None, None),
-                          (TEST_OUTSIDE_FILE, STATE, TEST_THERMOSTATS_FILE,
+                          (TEST_GEOSPATIAL_OBS_FILE, STATE, TEST_SENSORS_FILE,
                            TEST_POSTAL_FILE, None, hi.create_geospatial_df,
                            'location_ids', [LOCATION_ID1]),
-                          (TEST_OUTSIDE_FILE, None, None, None,
+                          (TEST_GEOSPATIAL_OBS_FILE, None, None, None,
                            None, hi.create_geospatial_df, None, None)])
 def test_df_creation_after_fixed_dict(data_file, states, sensors, postal, cycle, df_creation_func, id_type, ids):
     clean_dict = ct.dict_from_file(data_file, cycle=cycle, states=states,
@@ -257,21 +257,21 @@ def test_on_off_status_by_interval(df_fixture, id, start, end, freq):
 
 @slow
 @pytest.mark.parametrize("df_fixture, id, start, end, freq",
-                         [(inside_df_fixture(), SENSOR_ID1, dt.datetime(2011, 8, 4, 21, 0, 0),
+                         [(sensor_df_fixture(), SENSOR_ID1, dt.datetime(2011, 8, 4, 21, 0, 0),
                            dt.datetime(2011, 8, 4, 23, 0, 0), '1min30s'),
-                          (inside_df_fixture(), SENSOR_ID1, dt.datetime(2011, 8, 4, 21, 0, 0),
+                          (sensor_df_fixture(), SENSOR_ID1, dt.datetime(2011, 8, 4, 21, 0, 0),
                            dt.datetime(2011, 8, 4, 23, 0, 0), 'min30s'),
-                          (inside_df_fixture(), SENSOR_ID1, dt.datetime(2011, 8, 4, 21, 0, 0),
+                          (sensor_df_fixture(), SENSOR_ID1, dt.datetime(2011, 8, 4, 21, 0, 0),
                            dt.datetime(2011, 8, 4, 23, 0, 0), '2min'),
-                          (inside_df_fixture(), SENSOR_ID1, dt.datetime(2011, 8, 4, 21, 0, 0),
+                          (sensor_df_fixture(), SENSOR_ID1, dt.datetime(2011, 8, 4, 21, 0, 0),
                            dt.datetime(2011, 8, 4, 23, 0, 0), 'min'),
-                          (outside_df_fixture(), LOCATION_ID1, dt.datetime(2011, 8, 4, 21, 0, 0),
+                          (geospatial_df_fixture(), LOCATION_ID1, dt.datetime(2011, 8, 4, 21, 0, 0),
                            dt.datetime(2011, 8, 4, 23, 0, 0), '1min30s'),
-                          (outside_df_fixture(), LOCATION_ID1, dt.datetime(2011, 8, 4, 21, 0, 0),
+                          (geospatial_df_fixture(), LOCATION_ID1, dt.datetime(2011, 8, 4, 21, 0, 0),
                            dt.datetime(2011, 8, 4, 23, 0, 0), 'min30s'),
-                          (outside_df_fixture(), LOCATION_ID1, dt.datetime(2011, 8, 4, 21, 0, 0),
+                          (geospatial_df_fixture(), LOCATION_ID1, dt.datetime(2011, 8, 4, 21, 0, 0),
                            dt.datetime(2011, 8, 4, 23, 0, 0), '2min'),
-                          (outside_df_fixture(), LOCATION_ID1, dt.datetime(2011, 8, 4, 21, 0, 0),
+                          (geospatial_df_fixture(), LOCATION_ID1, dt.datetime(2011, 8, 4, 21, 0, 0),
                            dt.datetime(2011, 8, 4, 23, 0, 0), 'min')])
 def test_temps_by_interval(df_fixture, id, start, end, freq):
     kwargs = {'freq': freq}
@@ -283,8 +283,8 @@ def test_temps_by_interval(df_fixture, id, start, end, freq):
 @pytest.mark.parametrize("thermo_id, start, end, freq, cycle_df, inside_df, outside_df, thermo_file",
                          [(SENSOR_ID1, dt.datetime(2011, 8, 4, 21, 0, 0),
                            dt.datetime(2011, 8, 4, 23, 59, 0), '1min',
-                           cycle_df_fixture(), inside_df_fixture(),
-                           outside_df_fixture(), TEST_THERMOSTATS_FILE)])
+                           cycle_df_fixture(), sensor_df_fixture(),
+                           geospatial_df_fixture(), TEST_SENSORS_FILE)])
 def test_single_day_cycling_and_temps(thermo_id, start, end, freq, cycle_df,
                                       inside_df, outside_df, thermo_file):
     single_day_arr = ts.cycling_and_obs_arrays(cycle_df, cycling_id=thermo_id, start=start,
@@ -300,7 +300,7 @@ def test_single_day_cycling_and_temps(thermo_id, start, end, freq, cycle_df,
 
 
 @pytest.mark.parametrize("id, devices_file, cycles_df, sensors_df, geospatial_df",
-[(92, TEST_THERMOSTATS_FILE, cycle_df_fixture(), inside_df_fixture(), outside_df_fixture())])
+                         [(92, TEST_SENSORS_FILE, cycle_df_fixture(), sensor_df_fixture(), geospatial_df_fixture())])
 def test_consecutive_days_of_observations(id, devices_file, cycles_df, sensors_df, geospatial_df):
     # dummy = 1 # just here to lookw at the input variables for debugging
     # cyc = cycles_df # just here for debugging
@@ -312,8 +312,8 @@ def test_consecutive_days_of_observations(id, devices_file, cycles_df, sensors_d
 #
 # @slow
 # @pytest.mark.parametrize("df, id, minimum_records",
-#                          [(inside_df_fixture(), None, 2),
-#                           (inside_df_fixture(), SENSOR_ID1, 1)])
+#                          [(sensor_df_fixture(), None, 2),
+#                           (sensor_df_fixture(), SENSOR_ID1, 1)])
 # def test_min_and_max_indoor_temp_by_id(df, id, minimum_records):
 #     if id is None:
 #         min_max_df = ts.min_and_max_indoor_temp_by_id(df)
@@ -326,8 +326,8 @@ def test_consecutive_days_of_observations(id, devices_file, cycles_df, sensors_d
 #
 # @slow
 # @pytest.mark.parametrize("df, id, minimum_records",
-#                          [(outside_df_fixture(), None, 2),
-#                           (outside_df_fixture(), LOCATION_ID1, 1)])
+#                          [(geospatial_df_fixture(), None, 2),
+#                           (geospatial_df_fixture(), LOCATION_ID1, 1)])
 # def test_min_and_max_outdoor_temp_by_id(df, id, minimum_records):
 #     if id is None:
 #         min_max_df = ts.min_and_max_outdoor_temp_by_id(df)
@@ -351,8 +351,8 @@ def test_consecutive_days_of_observations(id, devices_file, cycles_df, sensors_d
 # @slow
 # @pytest.mark.parametrize("df_fixture",
 #                          [cycle_df_fixture(),
-#                           inside_df_fixture(),
-#                           outside_df_fixture()])
+#                           sensor_df_fixture(),
+#                           geospatial_df_fixture()])
 # def test_first_full_day_df(df_fixture):
 #     day = ct.start_of_first_full_day_df(df_fixture)
 #     assert isinstance(day, dt.date)
@@ -361,8 +361,8 @@ def test_consecutive_days_of_observations(id, devices_file, cycles_df, sensors_d
 # @slow
 # @pytest.mark.parametrize("df_fixture",
 #                          [cycle_df_fixture(),
-#                           inside_df_fixture(),
-#                           outside_df_fixture()])
+#                           sensor_df_fixture(),
+#                           geospatial_df_fixture()])
 # def test_last_full_day_df(df_fixture):
 #     day = ct.start_of_last_full_day_df(df_fixture)
 #     assert isinstance(day, dt.date)

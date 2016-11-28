@@ -123,16 +123,16 @@ LOCATION_IDS = [LOCATION_ID1, LOCATION_ID2]
 STATE = parser.get('test_ids_and_states', 'STATE')
 
 # File names
-options_vals = ['TEST_CYCLES_FILE', 'TEST_INSIDE_FILE', 'TEST_OUTSIDE_FILE',
-                'TEST_THERMOSTATS_FILE', 'TEST_POSTAL_FILE']
+options_vals = ['TEST_CYCLES_FILE', 'TEST_SENSOR_OBS_FILE', 'TEST_GEOSPATIAL_OBS_FILE',
+                'TEST_SENSORS_FILE', 'TEST_POSTAL_FILE']
 
 for option_val in options_vals:
     vars()[option_val] = os.path.join(TEST_DIR, parser.get('test_files', option_val))
 
 TEST_CYCLES_FILE = vars()['TEST_CYCLES_FILE']
-TEST_INSIDE_FILE = vars()['TEST_INSIDE_FILE']
-TEST_OUTSIDE_FILE = vars()['TEST_OUTSIDE_FILE']
-TEST_THERMOSTATS_FILE = vars()['TEST_THERMOSTATS_FILE']
+TEST_SENSOR_OBS_FILE = vars()['TEST_SENSOR_OBS_FILE']
+TEST_GEOSPATIAL_OBS_FILE = vars()['TEST_GEOSPATIAL_OBS_FILE']
+TEST_SENSORS_FILE = vars()['TEST_SENSORS_FILE']
 TEST_POSTAL_FILE = vars()['TEST_POSTAL_FILE']
 
 test_pickle_section = 'test_pickle_files'
