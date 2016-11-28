@@ -131,7 +131,7 @@ def on_off_status(df, id=None, start=None, end=None, freq='1min'):
     assert len(starts) == len(ends)
     dt_delta = _timedelta_from_string(freq)
     for cycle in range(len(starts)):
-        start_on, end_on = (_int_index_based_on_freq(time, start, dt_delta)
+        start_on, end_on = (_int_index_based_on_freq(time, pd.Timestamp(start), dt_delta)
                             for time in (starts[cycle], ends[cycle]))
         status[start_on:end_on + 1] = 1
     return dt_intervals, status
