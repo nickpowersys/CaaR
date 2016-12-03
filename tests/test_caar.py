@@ -18,7 +18,7 @@ from caar.configparser_read import TEST_CYCLES_FILE, CYCLES_PICKLE_FILE_OUT,   \
     GEOSPATIAL_PICKLE_FILE_OUT, GEOSPATIAL_PICKLE_FILE, LOCATION_IDS,          \
     TEST_SENSORS_FILE, STATE, TEST_POSTAL_FILE, CYCLE_TYPE_COOL,           \
     TEST_SENSOR_OBS_FILE, TEST_GEOSPATIAL_OBS_FILE, ALL_STATES_CYCLES_PICKLED_OUT,        \
-    ALL_STATES_INSIDE_PICKLED_OUT, ALL_STATES_OUTSIDE_PICKLED_OUT, SENSOR_ID1, \
+    ALL_STATES_SENSOR_OBS_PICKLED_OUT, ALL_STATES_GEOSPATIAL_OBS_PICKLED_OUT, SENSOR_ID1, \
     LOCATION_ID1
 
 standard_library.install_aliases()
@@ -78,7 +78,7 @@ def postal_fixture():
 def state_fixture():
     return [STATE]
 
-@slow
+
 @pytest.mark.parametrize("data_file, states, sensors, postal, cycle, auto",
                           [(TEST_CYCLES_FILE, STATE, TEST_SENSORS_FILE,
                             TEST_POSTAL_FILE, CYCLE_TYPE_COOL, 'cycles'),
@@ -100,7 +100,7 @@ def test_select_clean_auto(data_file, states, sensors, postal, cycle, auto):
     assert len(clean_dict) > 0
 
 
-@slow
+
 @pytest.mark.parametrize("data_file, states, sensors, postal, cycle, auto",
                          [(TEST_CYCLES_FILE, None, None, None, CYCLE_TYPE_COOL,
                            'cycles'),
@@ -116,7 +116,7 @@ def test_col_meta_auto(data_file, states, sensors, postal, cycle, auto):
     assert len(col_meta) > 0
 
 
-@slow
+
 @pytest.mark.parametrize("data_file, states, sensors, postal, cycle, auto",
                          [(TEST_CYCLES_FILE, STATE, TEST_SENSORS_FILE,
                            TEST_POSTAL_FILE, CYCLE_TYPE_COOL, None),
@@ -136,7 +136,7 @@ def test_select_clean(data_file, states, sensors, postal, cycle, auto):
     assert len(clean_dict) > 0
 
 
-@slow
+
 @pytest.mark.parametrize("tempdir, data_file, cycle, states_to_clean, "
                          "expected_path, sensors, postal, auto, encoding",
                          [(tmpdir(), TEST_CYCLES_FILE, CYCLE_TYPE_COOL, STATE, CYCLES_PICKLE_FILE_OUT,
@@ -145,11 +145,11 @@ def test_select_clean(data_file, states, sensors, postal, cycle, auto):
                            None, None, 'cycles', 'UTF-8'),
                           (tmpdir(), TEST_SENSOR_OBS_FILE, None, STATE, SENSOR_PICKLE_FILE_OUT,
                            TEST_SENSORS_FILE, TEST_POSTAL_FILE, 'sensors', 'UTF-8'),
-                          (tmpdir(), TEST_SENSOR_OBS_FILE, None, None, ALL_STATES_INSIDE_PICKLED_OUT,
+                          (tmpdir(), TEST_SENSOR_OBS_FILE, None, None, ALL_STATES_SENSOR_OBS_PICKLED_OUT,
                            None, None, 'sensors', 'UTF-8'),
                           (tmpdir(), TEST_GEOSPATIAL_OBS_FILE, None, STATE, GEOSPATIAL_PICKLE_FILE_OUT,
                            TEST_SENSORS_FILE, TEST_POSTAL_FILE, 'geospatial', 'UTF-8'),
-                          (tmpdir(), TEST_GEOSPATIAL_OBS_FILE, None, None, ALL_STATES_OUTSIDE_PICKLED_OUT,
+                          (tmpdir(), TEST_GEOSPATIAL_OBS_FILE, None, None, ALL_STATES_GEOSPATIAL_OBS_PICKLED_OUT,
                            None, None, 'geospatial', 'UTF-8')])
 def test_pickle_cycles_inside_outside(tempdir, data_file, cycle, states_to_clean, expected_path,
                                       sensors, postal, auto, encoding):
@@ -161,7 +161,7 @@ def test_pickle_cycles_inside_outside(tempdir, data_file, cycle, states_to_clean
     assert pickle_file == os.path.basename(expected_path)
 
 
-@slow
+
 @pytest.mark.parametrize("pickle_file, df_creation_func, id_type, ids",
                          [(CYCLES_PICKLE_FILE, hi.create_cycles_df,
                            'device_ids', [SENSOR_ID1]),
@@ -179,7 +179,7 @@ def test_df_creation(pickle_file, df_creation_func, id_type, ids):
     df = df_creation_func(pickle_file, **kwargs)
     assert isinstance(df, pd.DataFrame)
 
-@slow
+
 @pytest.mark.parametrize("data_file, states, sensors, postal, cycle, auto, df_creation_func, id_type, ids",
                          [(TEST_CYCLES_FILE, STATE, TEST_SENSORS_FILE,
                            TEST_POSTAL_FILE, CYCLE_TYPE_COOL, 'cycles', hi.create_cycles_df,
@@ -210,7 +210,7 @@ def test_df_creation_after_dict(data_file, states, sensors, postal, cycle, auto,
     assert isinstance(df, pd.DataFrame)
 
 
-@slow
+
 @pytest.mark.parametrize("data_file, states, sensors, postal, cycle, df_creation_func, id_type, ids",
                          [(TEST_CYCLES_FILE, STATE, TEST_SENSORS_FILE,
                            TEST_POSTAL_FILE, CYCLE_TYPE_COOL, hi.create_cycles_df,
@@ -239,7 +239,7 @@ def test_df_creation_after_fixed_dict(data_file, states, sensors, postal, cycle,
     df = df_creation_func(clean_dict, **kwargs)
     assert isinstance(df, pd.DataFrame)
 
-@slow
+
 @pytest.mark.parametrize("df_fixture, id, start, end, freq",
                          [(cycle_df_fixture(), SENSOR_ID1, dt.datetime(2012, 6, 18, 21, 0, 0),
                            dt.datetime(2012, 6, 18, 23, 0, 0), '1min30s'),
@@ -255,7 +255,7 @@ def test_on_off_status_by_interval(df_fixture, id, start, end, freq):
     assert len(dt_intervals) > 0
     assert len(on_off) == len(dt_intervals)
 
-@slow
+
 @pytest.mark.parametrize("df_fixture, id, start, end, freq",
                          [(sensor_df_fixture(), SENSOR_ID1, dt.datetime(2011, 8, 4, 21, 0, 0),
                            dt.datetime(2011, 8, 4, 23, 0, 0), '1min30s'),
@@ -279,7 +279,7 @@ def test_temps_by_interval(df_fixture, id, start, end, freq):
     assert len(temps[0]) > 0
 
 
-@slow
+
 @pytest.mark.parametrize("thermo_id, start, end, freq, cycle_df, inside_df, outside_df, thermo_file",
                          [(SENSOR_ID1, dt.datetime(2011, 8, 4, 21, 0, 0),
                            dt.datetime(2011, 8, 4, 23, 59, 0), '1min',
@@ -299,12 +299,13 @@ def test_single_day_cycling_and_temps(thermo_id, start, end, freq, cycle_df,
     assert single_day_arr[1].shape[1] == 3
 
 
-@pytest.mark.parametrize("id, devices_file, cycles_df, sensors_df, geospatial_df",
-                         [(92, TEST_SENSORS_FILE, cycle_df_fixture(), sensor_df_fixture(), geospatial_df_fixture())])
-def test_consecutive_days_of_observations(id, devices_file, cycles_df, sensors_df, geospatial_df):
-    # dummy = 1 # just here to lookw at the input variables for debugging
-    # cyc = cycles_df # just here for debugging
-    obs = hs.consecutive_days_of_observations(id, devices_file, cycles_df, sensors_df, geospatial_df)
+@pytest.mark.parametrize("id, devices_file, cycles_df, sensors_df, geospatial_df, include_first_last_days",
+                         [(92, TEST_SENSORS_FILE, cycle_df_fixture(), sensor_df_fixture(), geospatial_df_fixture(),
+                           False)])
+def test_consecutive_days_of_observations(id, devices_file, cycles_df, sensors_df, geospatial_df,
+                                          include_first_last_days):
+    obs = hs.consecutive_days_of_observations(id, devices_file, cycles_df, sensors_df, geospatial_df=geospatial_df,
+                                              include_first_and_last_days=include_first_last_days)
     assert isinstance(obs, pd.DataFrame)
     assert len(obs) > 0
 

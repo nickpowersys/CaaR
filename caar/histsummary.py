@@ -65,7 +65,7 @@ def consecutive_days_of_observations(id, devices_file, cycles_df,
                    'You may want to confirm whether the observations '
                    'collected covered the entire day(s).')
     elif not include_first_and_last_days:
-        first_day_in_streak = obs_counts.index[1] # Second day because first may be partial
+        first_day_in_streak = obs_counts.index[1]  # Second day because first may be partial
         last_day = obs_counts.index[-2]
     else:
         first_day_in_streak = obs_counts.index[0]
@@ -96,72 +96,6 @@ def consecutive_days_of_observations(id, devices_file, cycles_df,
                               columns=['ID', 'First day', 'Last day',
                                        'Consecutive days'])
     return streaks_df
-
-    # possible_last_day = first_day + pd.Timedelta(days=1)
-    # last_day = first_day
-    # # Outer loop
-    # while last_day <= obs_counts.index[-1]:
-    #     # event triggers that possible is not in index.
-    #
-    #     if possible_last_day in obs_counts.index:
-    #         last_day = possible_last_day
-    #         possible_last_day += possible_last_day + pd.Timedelta(days=1)
-    #         possible_last_day = first_day + pd.Timedelta(days=1)
-    #         if first_day + pd.Timedelta(days=1) in obs_counts.index:
-    #             possible_last_day = first_day + pd.Timedelta(days=1)
-    #         else:
-    #             last_day = first_day
-    #             possible_last_day = first_day + pd.Timedelta(days=1)
-    #         while possible_last_day in obs_counts.index:
-    #             possible_last_day += pd.Timedelta(days=1)
-    #             # loop until the possible_last_day is not in the index
-    #             last_day = possible_last_day
-    #         total_days = (last_day - first_day + pd.Timedelta(days=1)) / pd.Timedelta(days=1)
-    #         first_day_dt = dt.date(first_day.year, first_day.month,
-    #                                first_day.day)
-    #         last_day_dt = dt.date(last_day.year, last_day.month,
-    #                               last_day.day)
-    #         streaks.append((id, first_day_dt, last_day_dt, total_days))
-    #     else:
-    #         first_day += pd.Timedelta(days=1)
-    #
-    # prev_day = day0
-    # next_day = day0 + pd.Timedelta(days=1)
-    # while next_day in obs_counts.index:
-    #     prev_day = next_day
-    #     next_day = day0 + pd.Timedelta(days=1)
-    # last_day = prev_day
-    #
-    # if
-    # if next_day in obs_counts.index:
-    #     #day1 = day0 + pd.Timedelta(days=1)
-    #
-    # # streak_days += 1
-    # # obs_index = obs_counts.index[-2] # debug only
-    # while day1 <= obs_counts.index[-2]:  # Next to last (last may be partial)
-    #     if day1 in obs_counts.index:
-    #         streak_days += 1
-    #         day1 += pd.Timedelta(days=1)
-    #     else:
-    #
-    #         if streak_days >= 3:  # Ignore first and last day (may be partial)
-    #             first_day = day0 + pd.Timedelta(days=1)
-    #             last_day = day1 - pd.Timedelta(days=1)
-    #             total_days = (last_day - first_day + pd.Timedelta(days=1)) / pd.Timedelta(days=1)
-    #             first_day_dt = dt.date(first_day.year, first_day.month,
-    #                                    first_day.day)
-    #             last_day_dt = dt.date(last_day.year, last_day.month,
-    #                                   last_day.day)
-    #             streaks.append((id, first_day_dt, last_day_dt, total_days))
-    #         streak_days = 0
-    #         day0 = day1 + pd.Timedelta(days=1)
-    #         day1 = day0 + pd.Timedelta(days=1)
-    # streaks_arr = np.array(streaks)
-    # streaks_arr[streaks_arr[:, 1].argsort()]
-    # streaks_df = pd.DataFrame(data=streaks_arr,
-    #                           columns=['ID', 'First day', 'Last day',
-    #                                    'Consecutive days'])
-    # return streaks_df
 
 
 def daily_cycle_sensor_and_geospatial_obs_counts(id, devices_file, cycles_df, sensors_df,
@@ -202,15 +136,13 @@ def daily_cycle_sensor_and_geospatial_obs_counts(id, devices_file, cycles_df, se
                                       for df in dfs)
     else:
         cycles, sensor = (df.set_index(df.index.droplevel()) for df in dfs)
-    cycles_time = _get_time_index_column_label(cycles_df)
-    cycles_sensors = pd.merge(cycles, sensor, left_index=cycles_time,
+    cycles_sensors = pd.merge(cycles, sensor, left_index=True,
                               right_index=True, how='inner')
     cycle_end_time = _get_time_label_of_data(cycles_df)
     cycles_sensors.rename(columns={cycle_end_time: 'Cycles_obs'})
     if geospatial_data:
-        geospatial_time_heading = _get_time_index_column_label(geospatial_df)
         return pd.merge(cycles_sensors, geospatial, left_index=True,
-                        right_index=geospatial_time_heading)
+                        right_index=True)
     else:
         return cycles_sensors
 
