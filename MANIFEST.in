@@ -1,3 +1,7 @@
 include LICENSE.md
 include LICENSES/*
+include caar/config.ini
+include data/*.csv
+include tests/data/*.csv
 include tests/data/*.pickle
+

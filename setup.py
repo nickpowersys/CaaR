@@ -19,9 +19,8 @@ setup(
     packages=find_packages(exclude=['docs']),
     package_data={
     },
-    data_files=[('caar', ['config.ini']),
-                ('data', ['*.csv']),
-                ('tests', ['data/*.csv'])],
+    data_files=[
+    ],
     include_package_data=True,
     platforms='any',
     classifiers=[
