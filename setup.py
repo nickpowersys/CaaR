@@ -9,17 +9,21 @@ setup(
     author='Nicholas A. Brown',
     author_email='nbprofessional@gmail.com',
     description='Accelerating analysis of time stamped sensor observations and '
-                'cycling loads.',
-    # install_requires=['numpy>=1.11.1',
-    #  'pandas>=0.18.1',
-    #  'future',
-    #  'click>=6.6',
-    #  ],
-    packages=find_packages(),
+                'cycling device operations.',
+    install_requires=[
+      'backports',
+      'future',
+      'numpy',
+      'pandas',
+      ],
+    packages=find_packages(exclude=['docs']),
     package_data={
-      'caar': ['./config.ini'],
-      'data': ['*.csv']
+      'caar':['./LICENSE.md'],
+      'LICENSES': ['FUTURE_LICENSE', 'NUMPY_LICENSE','PANDAS_LICENSE']
     },
+    data_files=[('caar', ['config.ini']),
+                ('data', ['*.csv']),
+                ('tests', ['data/*.pickle', 'data/*.csv'])],
     include_package_data=True,
     platforms='any',
     classifiers=[
@@ -28,7 +32,7 @@ setup(
         'License :: OSI Approved :: BSD License',
         'Natural Language :: English',
         'Operating System :: MacOS :: MacOS X',
-        'Operating System :: Microsoft :: Windows :: Windows 7',
+        'Operating System :: Microsoft :: Windows',
         'Operating System :: POSIX :: Linux',
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3.4',

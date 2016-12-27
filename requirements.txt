@@ -1,4 +1,4 @@
-numpy
-pandas
-future
-
+backports==1.0
+future==0.15.2
+numpy==1.11.3
+pandas==0.19.2

@@ -1,27 +1,30 @@
-CaaR - Cooling as a Resource (Beta Release)
-===========================================
+CaaR - Cycling/Cooling/Charging as a Resource (Beta Release)
+============================================================
 
-The objective of this project is to convert observations of temperatures and thermostat ON/OFF cycles in cooling or heating modes from text files into indexed time series in pandas and NumPy.
+The objective of this project is to convert observations of time stamped sensor readings and/or cycling device operations from text files into indexed time series in pandas and NumPy.
 
-The package's functionality can easily work with other types of data. For example, batteries also involve duty cycles. The package can also be used with time-stamped observations of state of charge or other measurements.
+For example, it can convert observations of temperatures and thermostat-driven ON/OFF cycles in cooling or heating modes, or batteries’ charging and discharging cycles. The package can be used with any time-stamped observations that are in text form.
 
-By convention, the primary time-stamped data will be from these sources:
+The package will format raw data and match the results across the sources based on metadata such as device ID’s and/or location ID’s and time, in order to form multi-dimensional time series.
 
-* cooling and heating cycles within buildings
-* indoor temperature data, and
-* local weather observations
+It automatically detects the type of data in each column of a text file, based on the data itself and based on column labels. The detection allows for any ordering of columns in the input data.
 
-The package will format raw data and match the results across the sources based on metadata such as device ID's and/or location ID's and time, in order to form multi-dimensional time series.
-
-It can automatically detect the type of data in each column of a text file, based on the data itself and based on column labels. The detection allows for any ordering of columns in the input data.
-
-In order to select data relating to thermostats or temperatures in zip codes in specific states, metadata files are needed. Example files are also in the data folder.
+Note the need for metadata files for both thermostats and zip codes, if matching data with devices based on geographic location. Example files are also in the data folder.
 
 Motivation
 ==========
 
-This project is intended to accelerate analysis of time-stamped data including thermostat operations at the device level and temperature data (indoor or outdoor). It does this by putting  observations into an indexed form that can be summarized in aggregated form and at the device level. It supports visualization in time series form. The ultimate intent is to support analysis related to HVAC control, power systems or energy efficiency research.
+This project’s intent is to accelerate analysis of time-stamped data at the device level as well as associated data from other sources if applicable. It does this by putting observations into an indexed form that can be summarized in aggregated form and at the device level. It supports visualization in time series form
 
+It may be used for general scientific research that aims to 1) index time stamped data in general from large text files, and 2) use pandas and NumPy.
+
+It provides the user an API that abstracts away some of the mundane details of
+
+* reading raw text data into a structured form in Python
+* putting the Python variables into pandas DataFrames, and
+* selecting devices and time ranges, and otherwise summarizing the data,
+
+while still providing full usage of pure pandas functionality.
 
 Installation and How to Start Using
 ===================================
@@ -39,6 +42,7 @@ The package may be installed using *pip* or *conda*.
 * pandas
 * NumPy
 * future
+* backports
 
 Assuming no version is specified, the latest version of *caar* will be installed.
 
@@ -55,6 +59,12 @@ Examples and Documentation
 
 **Example Notebook**
 
+The example notebook demonstrates how to work with primary time-stamped data from these sources:
+
+* cooling and heating cycles within buildings
+* indoor temperature data, and
+* outdoor temperature data
+
 https://anaconda.org/nickpowersys/caarexamples/notebook
 
 **API Documentation**
@@ -70,7 +80,7 @@ CaaR can be used to **read delimited text files** and (optionally) save the data
 
 Common delimited text file formats including commas, tabs, pipes and spaces are detected in that order within the first row and the first delimiter detected is used. In all cases, rows are only used if the number of values match the number of column labels in the first row.
 
-Each input file is expected to have (at least) columns representing IDs, time stamps (or starting and ending time stamps for cycles), and (if not cycles) corresponding observations.
+Each input file is expected to have (at least) columns representing ID's, time stamps (or starting and ending time stamps for cycles), and (if not cycles) corresponding observations.
 
 To use the automatic column detection functionality, use the keyword argument 'auto' within the pickle_from_file() or dict_from_file() function (see the notebook example or API documentation) and assign it one of the values: 'cycles', 'inside', or 'outside' (for example, auto='inside').
 

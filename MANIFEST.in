@@ -1,5 +1,0 @@
-include caar/*.ini
-include data/*.csv
-include tests/data/*.csv
-prune caar/_drafted.py
-

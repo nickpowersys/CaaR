@@ -1,14 +1,8 @@
-# CaaR - Cooling as a Resource (Beta Release)
+# CaaR - Cycling/Cooling/Charging as a Resource (Beta Release)
 
 The objective of this project is to convert observations of time stamped sensor readings and/or cycling device operations from text files into indexed time series in pandas and NumPy.
 
 For example, it can convert observations of temperatures and thermostat-driven ON/OFF cycles in cooling or heating modes, or batteries’ charging and discharging cycles. The package can be used with any time-stamped observations that are in text form.
-
-The example notebook demonstrates how to work with primary time-stamped data from these sources:
- 
-* cooling and heating cycles within buildings
-* indoor temperature data, and
-* local outdoor temperature data
 
 The package will format raw data and match the results across the sources based on metadata such as device ID’s and/or location ID’s and time, in order to form multi-dimensional time series.
 
@@ -18,7 +12,7 @@ Note the need for metadata files for both thermostats and zip codes, if matching
 
 ## Motivation
 
-This project’s intent is to accelerate analysis of time-stamped data at the device level as well as associated data from other sources if applicable. It does this by putting observations into an indexed form that can be summarized in aggregated form and at the device level. It supports visualization in time series form. It came about from the need to support analysis related to HVAC control and power systems.
+This project’s intent is to accelerate analysis of time-stamped data at the device level as well as associated data from other sources if applicable. It does this by putting observations into an indexed form that can be summarized in aggregated form and at the device level. It supports visualization in time series form
 
 It may be used for general scientific research that aims to 1) index time stamped data in general from large text files, and 2) use pandas and NumPy.
 
@@ -44,6 +38,7 @@ The package may be installed using *pip* or *conda*.
 * pandas
 * NumPy
 * future
+* backports
 
 Assuming no version is specified, the latest version of *caar* will be installed.
 
@@ -56,6 +51,12 @@ Assuming no version is specified, the latest version of *caar* will be installed
     conda install -c nickpowersys caar
 
 ### Example Notebook 
+
+The example notebook demonstrates how to work with primary time-stamped data from these sources:
+ 
+* cooling and heating cycles within buildings
+* indoor temperature data, and
+* outdoor temperature data
 
 https://anaconda.org/nickpowersys/caarexamples/notebook
 
