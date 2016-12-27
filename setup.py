@@ -18,12 +18,10 @@ setup(
       ],
     packages=find_packages(exclude=['docs']),
     package_data={
-      'caar':['./LICENSE.md'],
-      'LICENSES': ['FUTURE_LICENSE', 'NUMPY_LICENSE','PANDAS_LICENSE']
     },
     data_files=[('caar', ['config.ini']),
                 ('data', ['*.csv']),
-                ('tests', ['data/*.pickle', 'data/*.csv'])],
+                ('tests', ['data/*.csv'])],
     include_package_data=True,
     platforms='any',
     classifiers=[
