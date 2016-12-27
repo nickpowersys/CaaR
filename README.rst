@@ -1,9 +1,9 @@
 CaaR - Cycling/Cooling/Charging as a Resource (Beta Release)
 ============================================================
 
-The objective of this project is to convert observations of time stamped sensor readings and/or cycling device operations from text files into indexed time series in pandas and NumPy.
+The objective of this project is to convert observations of time-stamped sensor readings and/or cycling device operations from text files into indexed time series in pandas and NumPy.
 
-For example, it can convert observations of temperatures and thermostat-driven ON/OFF cycles in cooling or heating modes, or batteries’ charging and discharging cycles. The package can be used with any time-stamped observations that are in text form.
+For example, it can convert observations of temperatures and thermostat-driven ON/OFF cycles in cooling or heating modes, or batteries’ charging and discharging cycles.
 
 The package will format raw data and match the results across the sources based on metadata such as device ID’s and/or location ID’s and time, in order to form multi-dimensional time series.
 
