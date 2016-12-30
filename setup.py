@@ -3,7 +3,7 @@ from setuptools import find_packages, setup
 
 setup(
     name='caar',
-    version='5.0.0-beta.5',
+    version='5.0.0-beta.6',
     url='http://github.com/nickpowersys/CaaR/',
     license='BSD 3-Clause License',
     author='Nicholas A. Brown',
