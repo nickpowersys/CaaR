@@ -3,7 +3,7 @@ from setuptools import find_packages, setup
 
 setup(
     name='caar',
-    version='5.0.0-beta.1',
+    version='5.0.0-beta.4',
     url='http://github.com/nickpowersys/CaaR/',
     license='BSD 3-Clause License',
     author='Nicholas A. Brown',
@@ -11,7 +11,7 @@ setup(
     description='Accelerating analysis of time stamped sensor observations and '
                 'cycling device operations.',
     install_requires=[
-      'backports',
+      'configparser'
       'future',
       'numpy',
       'pandas',
