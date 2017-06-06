@@ -1,5 +1,5 @@
 from __future__ import absolute_import, division, print_function
-from backports.configparser import ConfigParser
+from configparser import ConfigParser
 import os.path
 import sys
 
