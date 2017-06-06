@@ -299,12 +299,13 @@ def test_single_day_cycling_and_temps(thermo_id, start, end, freq, cycle_df,
     assert single_day_arr[1].shape[1] == 3
 
 
-@pytest.mark.parametrize("id, devices_file, cycles_df, sensors_df, geospatial_df, include_first_last_days",
+@pytest.mark.parametrize("sensor_id, devices_file, cycles_df, sensors_df, geospatial_df, include_first_last_days",
                          [(92, TEST_SENSORS_FILE, cycle_df_fixture(), sensor_df_fixture(), geospatial_df_fixture(),
                            False)])
-def test_consecutive_days_of_observations(id, devices_file, cycles_df, sensors_df, geospatial_df,
+def test_consecutive_days_of_observations(sensor_id, devices_file, cycles_df, sensors_df, geospatial_df,
                                           include_first_last_days):
-    obs = hs.consecutive_days_of_observations(id, devices_file, cycles_df, sensors_df, geospatial_df=geospatial_df,
+    obs = hs.consecutive_days_of_observations(sensor_id, devices_file, cycles_df, sensors_df,
+                                              geospatial_df=geospatial_df,
                                               include_first_and_last_days=include_first_last_days)
     assert isinstance(obs, pd.DataFrame)
     assert len(obs) > 0
