@@ -13,8 +13,10 @@ caar.egg-info
 setuptools-25.1.4.zip
 punch_config.py
 punch_version.py
-tests/data/*inside*.pickle
-tests/data/*outside*.pickle
 create_pickles_*.ipynb
 gitinspect.html
 .ipynb_checkpoints/
+/.ipynb_checkpoints/
+HVAC_ML_DEV.ipynb
+/README.html
+README.html
