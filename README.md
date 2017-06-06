@@ -35,10 +35,10 @@ The package may be installed using *pip* or *conda*.
 
 ### Dependencies
 
+* configparser (2.7, 3.4)
+* future
 * pandas
 * NumPy
-* future
-* backports
 
 Assuming no version is specified, the latest version of *caar* will be installed.
 

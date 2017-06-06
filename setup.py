@@ -1,21 +1,33 @@
+import setuptools
 from setuptools import find_packages, setup
+import sys
 
+INSTALL_REQUIRES = [
+    'future',
+    'numpy',
+    'pandas',
+]
+EXTRAS_REQUIRE = {
+    'testing': ['pytest'],
+}
+
+if int(setuptools.__version__.split(".", 1)[0]) < 18:
+    assert "bdist_wheel" not in sys.argv
+    if sys.version_info[0:2] < (3, 5):
+        INSTALL_REQUIRES.append("configparser")
+else:
+    EXTRAS_REQUIRE[":python_version<'3.5'"] = ["configparser"]
 
 setup(
     name='caar',
-    version='5.0.0-beta.6',
+    version='5.0.1-beta.0',
     url='http://github.com/nickpowersys/CaaR/',
     license='BSD 3-Clause License',
     author='Nicholas A. Brown',
     author_email='nbprofessional@gmail.com',
     description='Accelerating analysis of time stamped sensor observations and '
                 'cycling device operations.',
-    install_requires=[
-      'configparser',
-      'future',
-      'numpy',
-      'pandas',
-      ],
+    install_requires=INSTALL_REQUIRES,
     packages=find_packages(exclude=['docs']),
     package_data={
     },
@@ -37,7 +49,5 @@ setup(
         'Topic :: Scientific/Engineering :: Information Analysis',
         'Topic :: Software Development :: Libraries :: Python Modules',
         ],
-    extras_require={
-        'testing': ['pytest'],
-    }
+    extras_require=EXTRAS_REQUIRE,
 )
