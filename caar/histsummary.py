@@ -31,7 +31,7 @@ def days_of_data_by_id(df):
     return days_data_df
 
 
-def consecutive_days_of_observations(id, devices_file, cycles_df,
+def consecutive_days_of_observations(sensor_id, devices_file, cycles_df,
                                      sensors_df, geospatial_df=None,
                                      include_first_and_last_days=False):
     """
@@ -41,7 +41,7 @@ def consecutive_days_of_observations(id, devices_file, cycles_df,
     Only days in which all data types have one or more observations are included.
 
     Args:
-        id (int or str): The ID of the device.
+        sensor_id (int or str): The ID of the device.
 
         devices_file(str): Path of devices file.
 
@@ -56,14 +56,12 @@ def consecutive_days_of_observations(id, devices_file, cycles_df,
         'Last Day', and count ('Consecutive Days') for each set of consecutive
         days, for the specified ID.
     """
-    obs_counts = daily_cycle_sensor_and_geospatial_obs_counts(id, devices_file,
+    obs_counts = daily_cycle_sensor_and_geospatial_obs_counts(sensor_id, devices_file,
                                                               cycles_df, sensors_df,
                                                               geospatial_df=geospatial_df)
     streaks = []
     if not include_first_and_last_days and len(obs_counts.index) < 3:
-        ValueError('There may not be a single full day\'s worth of data.\n'
-                   'You may want to confirm whether the observations '
-                   'collected covered the entire day(s).')
+        return None
     elif not include_first_and_last_days:
         first_day_in_streak = obs_counts.index[1]  # Second day because first may be partial
         last_day = obs_counts.index[-2]
@@ -84,7 +82,8 @@ def consecutive_days_of_observations(id, devices_file, cycles_df,
             first_day_dt, last_day_dt = tuple(dt.date(d.year, d.month, d.day)
                                               for d in [first_day_in_streak,
                                                         last_day_in_streak])
-            streaks.append((id, first_day_dt, last_day_dt, total_days))
+            streaks.append((sensor_id, first_day_dt, last_day_dt,
+                            np.int64(total_days)))
             if last_day_in_streak < last_day:
                 first_day_in_streak = last_day_in_streak + pd.Timedelta(days=1)
                 while first_day_in_streak not in obs_counts.index:
@@ -98,7 +97,7 @@ def consecutive_days_of_observations(id, devices_file, cycles_df,
     return streaks_df
 
 
-def daily_cycle_sensor_and_geospatial_obs_counts(id, devices_file, cycles_df, sensors_df,
+def daily_cycle_sensor_and_geospatial_obs_counts(sensor_id, devices_file, cycles_df, sensors_df,
                                                  geospatial_df=None):
     """Returns a pandas DataFrame with the count of observations of each type
     of data given in the arguments (cycles, sensor observations, geospatial
@@ -106,7 +105,7 @@ def daily_cycle_sensor_and_geospatial_obs_counts(id, devices_file, cycles_df, se
     observations are included.
 
     Args:
-        id (int or str): The ID of the device.
+        sensor_id (int or str): The ID of the device.
 
         devices_file(str): Path of devices file.
 
@@ -120,13 +119,13 @@ def daily_cycle_sensor_and_geospatial_obs_counts(id, devices_file, cycles_df, se
         daily_obs_df (pandas DataFrame): DataFrame with index of the date, and
         values of 'Cycles_obs', 'Sensors_obs', and 'Geospatial_obs'.
     """
-    cycles = _slice_by_single_index(cycles_df, id_index=id)
-    sensor = _slice_by_single_index(sensors_df, id_index=id)
+    cycles = _slice_by_single_index(cycles_df, id_index=sensor_id)
+    sensor = _slice_by_single_index(sensors_df, id_index=sensor_id)
     # Get df's with number of observation by day
     dfs = [daily_data_points_by_id(df) for df in [cycles, sensor]]
     geospatial_data = True if isinstance(geospatial_df, pd.DataFrame) else False
     if geospatial_data:
-        location_id = location_id_of_sensor(id, devices_file)
+        location_id = location_id_of_sensor(sensor_id, devices_file)
         geospatial_records = _slice_by_single_index(geospatial_df,
                                                     id_index=location_id)
         dfs.append(daily_data_points_by_id(geospatial_records))
@@ -147,14 +146,14 @@ def daily_cycle_sensor_and_geospatial_obs_counts(id, devices_file, cycles_df, se
         return cycles_sensors
 
 
-def daily_data_points_by_id(df, id=None):
+def daily_data_points_by_id(df, devid=None):
     """Returns a pandas DataFrame with MultiIndex of ID and day,
     and the count of non-null raw data points per id and day as values.
 
     Args:
         df (pandas DataFrame): DataFrame as created by **history** module.
 
-        id (Optional[int or str]): The ID of a device.
+        devid (Optional[int or str]): The ID of a device.
 
     Returns:
         daily_obs_df (pandas DataFrame): DataFrame indexed by date, and
@@ -162,8 +161,8 @@ def daily_data_points_by_id(df, id=None):
     """
     # 1) Groups the DataFrame by the primary ID and by time.
     # 2) Gives count of records within groups.
-    if id is not None:
-        df = _slice_by_single_index(df, id_index=id)
+    if devid is not None:
+        df = _slice_by_single_index(df, id_index=devid)
     time_level = _get_time_level_of_df_multiindex(df)
     daily_df = (df.groupby([df.index.get_level_values(level=0),
                             pd.TimeGrouper('D', level=time_level)])
@@ -265,7 +264,7 @@ def _slice_by_one_index_in_triple_index(df, id_index=None, middle_index=None,
         idx_arg = idx[:, :, :]
 
     sliced_by_one = pd.DataFrame(df.loc[idx_arg, :])
-    sliced_by_one.sortlevel(inplace=True, sort_remaining=True)
+    sliced_by_one.sort_index(inplace=True, sort_remaining=True)
 
     return sliced_by_one
 
@@ -365,7 +364,7 @@ def _slice_by_one_index_in_double_index(df, id_index=None, time_index=None):
         idx_arg = idx[:, :]
 
     sliced_by_one = pd.DataFrame(df.loc[idx_arg, :])
-    sliced_by_one.sortlevel(inplace=True, sort_remaining=True)
+    sliced_by_one.sort_index(inplace=True, sort_remaining=True)
 
     return sliced_by_one
 
@@ -445,14 +444,14 @@ def _get_time_index_column_label(df):
 
 def _get_time_level_of_df_multiindex(df):
     for i in range(len(df.index._levels)):
-        if type(df.index._levels[i][0]) == pd.tslib.Timestamp:
+        if type(df.index._levels[i][0]) == pd.Timestamp:
             time_level = i
     return time_level
 
 
 def _get_time_label_of_data(df):
     for i in range(len(df.columns)):
-        if type(df.iloc[0, i]) == pd.tslib.Timestamp:
+        if type(df.iloc[0, i]) == pd.Timestamp:
             return df.columns[i]
     return None
 
@@ -616,14 +615,14 @@ def count_observations_by_sensor_id(df):
     return count_by_id_arr
 
 
-def count_observations_in_intervals_for_sensor_id(df, id, interval='D'):
+def count_observations_in_intervals_for_sensor_id(df, sensor_id, interval='D'):
     """Returns the count of inside temperature readings for a device by
     interval (defaults to daily).
 
     Args:
         df (pandas DataFrame): DataFrame as created by **history** module.
 
-        id (int): ID of device.
+        sensor_id (int): ID of device.
 
         interval (str): interval (pandas format). Defaults to daily.
 
@@ -634,7 +633,7 @@ def count_observations_in_intervals_for_sensor_id(df, id, interval='D'):
     idx = pd.IndexSlice
     first_data_field_label = _get_label_of_first_data_column(df)
     id_field_label = _get_id_index_column_label(df)
-    count_temps_per_day = (df.loc[idx[id, :], [first_data_field_label]]
+    count_temps_per_day = (df.loc[idx[sensor_id, :], [first_data_field_label]]
                            .reset_index(level=id_field_label)
                            .groupby(id_field_label)
                            .resample(interval)

@@ -524,7 +524,7 @@ def _non_index_col_types(cols_meta, dt_format=None):
 
 
 def _to_datetime(date_str, dt_format=None):
-    return pd.to_datetime(date_str, format=dt_format).to_datetime()
+    return pd.to_datetime(date_str, format=dt_format).to_pydatetime()
 
 
 def _remove_commas_from_int(numeric_string):

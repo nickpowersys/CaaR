@@ -171,5 +171,5 @@ def _create_multi_index_df(multiindex_names, multi_ids, column_names, values):
     multiindex_columns = tuple(multiindex_names)
     multicols = pd.MultiIndex.from_tuples(multi_ids, names=multiindex_columns)
     df = pd.DataFrame(values, index=multicols, columns=column_names)
-    df.sortlevel(inplace=True, sort_remaining=True)
+    df.sort_index(inplace=True, sort_remaining=True)
     return df
