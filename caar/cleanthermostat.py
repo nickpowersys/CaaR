@@ -163,7 +163,37 @@ def columns_summary(raw_file, cycle=None, states=None,
     raw file: the headings, the positions, and types that are consistent with
     the actual data (ints, floats, alphabetic ('alpha_only'), time, and zip
     codes. This function helps the user to avoid having to open a large
-    text file in an editor."""
+    text file in an editor.
+
+    This set of columns will be in dict based on dict_from_file() or pickle_from_file() and corresponding keyword arguments ('auto' is required, and must be a value other than None).
+
+    Args:
+        raw_file (str): The input file.
+
+        cycle (Optional[str]): The type of cycle that will be in the output. For example, example values that may be in the data file are 'Cool' and/or 'Heat'. If no specific value is specified as an argument, all modes will be in the output.
+
+        states (Optional[str]): One or more comma-separated, two-letter state abbreviations.
+
+        sensors_file (Optional[str]): Path of metadata file for sensors. Required if there is a states argument.
+
+        postal_file (Optional[str]): Metadata file for postal codes. Required if there is a states argument.
+
+        auto (Optional[Boolean]): {'cycles', 'sensors', 'geospatial', None} If one of the data types is specified, the function will detect which columns contain IDs, time stamps and values of interest automatically. If None (default), the order of columns in the delimited file and the config.ini file should match.
+
+        id_col_heading (Optional[str]): Indicates the heading in the header for the ID column.
+
+        cycle_col_heading (Optional[str]): Indicates the heading in the header for the cycle column.
+
+        cols_to_ignore (Optional[iterable of [str] or [int]]): Column headings or 0-based column indexes that should be left out of the output.
+
+        encoding (Optional[str]): Encoding of the raw data file. Default: 'UTF-8'.
+
+        delimiter (Optional[str]): Character to be used as row delimiter. Default is None, but commas, tabs, pipes and spaces are automatically detected in that priority order) if no delimiter is specified.
+
+        quote (Optional[str]): Characters surrounding data fields. Default is none, but double and single quotes surrounding data fields are automatically detected and removed if they are present in the data rows. If any other character is specified in the keyword argument, and it surrounds data in any column, it will be removed instead.
+    Returns:
+        pandas DataFrame
+    """
     columns = detect_columns(raw_file, cycle=cycle, states=states,
                              sensors_file=sensors_file,
                              postal_file=postal_file, auto=auto,
