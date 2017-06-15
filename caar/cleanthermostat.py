@@ -154,6 +154,28 @@ def dict_from_file(raw_file, cycle=None, states=None,
         return container
 
 
+def columns_summary(raw_file, cycle=None, states=None,
+                   sensors_file=None, postal_file=None, auto=None,
+                   encoding='UTF-8', delimiter=None, quote=None,
+                   id_col_heading=None, cycle_col_heading=None,
+                   cols_to_ignore=None):
+    """Returns pandas DataFrame that summarizes the columns detected in the
+    raw file: the headings, the positions, and types that are consistent with
+    the actual data (ints, floats, alphabetic ('alpha_only'), time, and zip
+    codes. This function helps the user to avoid having to open a large
+    text file in an editor."""
+    columns = detect_columns(raw_file, cycle=cycle, states=states,
+                             sensors_file=sensors_file,
+                             postal_file=postal_file, auto=auto,
+                             encoding=encoding, delimiter=delimiter,
+                             quote=quote, id_col_heading=id_col_heading,
+                             cycle_col_heading=cycle_col_heading,
+                             cols_to_ignore=cols_to_ignore)
+    df = pd.DataFrame(columns)
+
+    return df
+
+
 def detect_columns(raw_file, cycle=None, states=None,
                    sensors_file=None, postal_file=None, auto=None,
                    encoding='UTF-8', delimiter=None, quote=None,
