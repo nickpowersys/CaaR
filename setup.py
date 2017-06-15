@@ -20,7 +20,7 @@ else:
 
 setup(
     name='caar',
-    version='5.0.1-beta.0',
+    version='5.2.0-beta',
     url='http://github.com/nickpowersys/CaaR/',
     license='BSD 3-Clause License',
     author='Nicholas A. Brown',
