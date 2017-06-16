@@ -1,9 +1,9 @@
 from __future__ import absolute_import, division, print_function
 
-from io import open
-import csv
 from collections import namedtuple, OrderedDict
+import csv
 import datetime as dt
+from io import open
 import os.path
 import pickle
 import re
@@ -145,9 +145,9 @@ def dict_from_file(raw_file, cycle=None, states=None,
 
         records = _dict_from_lines_of_text(raw_file, **kwargs)
 
-        for col, meta in cols_meta.items():
-            if meta['type'] == 'numeric_commas':
-                meta['type'] == 'ints'
+        for col, col_meta in cols_meta.items():
+            if col_meta['type'] == 'numeric_commas':
+                col_meta['type'] == 'ints'
 
         container = {'cols_meta': cols_meta, 'records': records}
 
@@ -155,10 +155,10 @@ def dict_from_file(raw_file, cycle=None, states=None,
 
 
 def columns_summary(raw_file, cycle=None, states=None,
-                   sensors_file=None, postal_file=None, auto=None,
-                   encoding='UTF-8', delimiter=None, quote=None,
-                   id_col_heading=None, cycle_col_heading=None,
-                   cols_to_ignore=None):
+                    sensors_file=None, postal_file=None, auto=None,
+                    encoding='UTF-8', delimiter=None, quote=None,
+                    id_col_heading=None, cycle_col_heading=None,
+                    cols_to_ignore=None):
     """Returns pandas DataFrame that summarizes the columns detected in the
     raw file: the headings, the positions, and types that are consistent with
     the actual data (ints, floats, alphabetic ('alpha_only'), time, and zip
@@ -266,11 +266,85 @@ def _sort_meta_in_col_order(meta):
     return sorted_meta
 
 
-def pickle_from_file(raw_file, picklepath=None, cycle=None, states=None,
-                     sensors_file=None, postal_file=None, auto=None,
-                     id_col_heading=None, cycle_col_heading=None,
-                     cols_to_ignore=None, encoding='UTF-8', delimiter=None,
-                     quote=None, meta=False):
+def sensor_text_to_binary(raw_file, picklepath=None, states=None,
+                          sensors_file=None, postal_file=None,
+                          auto='sensors', id_col_heading=None,
+                          cols_to_ignore=None, encoding='UTF-8',
+                          delimiter=None, quote=None):
+    """Read delimited text file and create binary pickle file containing a dict of records. The keys are named tuples containing numeric IDs (strings) and time stamps.
+
+    See the example .csv data files at https://github.com/nickpowersys/caar.
+
+    Example sensor cycle file column headings: DeviceId, CycleType, StartTime, EndTime.
+
+    Example sensors file column headings: SensorId, TimeStamp, Degrees.
+
+    Example geospatial data file column headings LocationId, TimeStamp, Degrees.
+
+    Common delimited text file formats including commas, tabs, pipes and spaces are detected in
+    that order within the data rows (the header has its own delimiter detection and is handled separately,
+    automatically) and the first delimiter detected is used. In all cases, rows
+    are only used if the number of values match the number of column headings in the first row.
+
+    Each input file is expected to have (at least) columns representing ID's, time stamps (or
+    starting and ending time stamps for cycles), and (if not cycles) corresponding observations.
+
+    To use the automatic column detection functionality, use the keyword argument 'auto' and
+    assign it one of the values: 'cycles', 'sensors', or 'geospatial'.
+
+    The ID's should contain both letters and digits in some combination (leading zeroes are also
+    allowed in place of letters). Having the string 'id', 'Id' or 'ID' will then cause a column
+    to be the ID index within the combined ID-time stamp index for a given input file. If there
+    is no such heading, the leftmost column with alphanumeric strings (for example, 'T12' or
+    '0123') will be taken as the ID.
+
+    The output can be filtered on records from a state or set of states by specifying a
+    comma-delimited string containing state abbreviations. Otherwise, all available records
+    will be in the output.
+
+    If a state or states are specified, a sensors metadata file and postal
+    code file must be specified in the arguments and have the same location ID columns
+    and ZipCode/PostalCode column headings in the same left-to-right order as in the examples.
+    For the other columns, dummy values may be used if there is no actual data.
+
+    Args:
+        raw_file (str): The input file.
+
+        picklepath (str): The path of the desired pickle file. If it is not specified, a filename is generated automatically.
+
+        states (Optional[str]): One or more comma-separated, two-letter state abbreviations.
+
+        sensors_file (Optional[str]): Path of metadata file for sensors. Required if there is a states argument.
+
+        postal_file (Optional[str]): Metadata file for postal codes. Required if there is a states argument.
+
+        auto (Optional[Boolean]): {'sensors', None} If not None, the function will detect which columns contain IDs, time stamps and values of interest automatically. If None (default), the order and headings of columns in the delimited text file and the config.ini file should match.
+
+        id_col_heading (Optional[str]): Indicates the heading in the header for the ID column.
+
+        cols_to_ignore (Optional[iterable of [str] or [int]]): Column headings or 0-based column indexes that should be left out of the output.
+
+        encoding (Optional[str]): Encoding of the raw data file. Default: 'UTF-8'.
+
+        delimiter (Optional[str]): Character to be used as row delimiter. Default is None, but commas, tabs, pipes and spaces are automatically detected in that priority order) if no delimiter is specified.
+
+        quote (Optional[str]): Characters surrounding data fields. Default is none, but double and single quotes surrounding data fields are automatically detected and removed if they are present in the data rows. If any other character is specified in the keyword argument, and it surrounds data in any column, it will be removed instead.
+
+    Returns:
+        picklepath (str): Path of output file.
+        """
+    return pickle_from_file(raw_file, picklepath=picklepath, states=states,
+                            sensors_file=sensors_file, postal_file=postal_file,
+                            auto=auto, id_col_heading=id_col_heading,
+                            cols_to_ignore=cols_to_ignore, encoding=encoding,
+                            delimiter=delimiter, quote=quote)
+
+
+def cycles_text_to_binary(raw_file, picklepath=None, cycle=None, states=None,
+                          sensors_file=None, postal_file=None, auto='cycles',
+                          id_col_heading=None, cycle_col_heading=None,
+                          cols_to_ignore=None, encoding='UTF-8', delimiter=None,
+                          quote=None):
     """Read delimited text file and create binary pickle file containing a dict of records. The keys are named tuples containing numeric IDs (strings) and time stamps.
 
     See the example .csv data files at https://github.com/nickpowersys/caar.
@@ -334,7 +408,161 @@ def pickle_from_file(raw_file, picklepath=None, cycle=None, states=None,
 
         quote (Optional[str]): Characters surrounding data fields. Default is none, but double and single quotes surrounding data fields are automatically detected and removed if they are present in the data rows. If any other character is specified in the keyword argument, and it surrounds data in any column, it will be removed instead.
 
-        meta (Optional[bool]): An alternative way to store metadata about columns, besides the detect_columns() function. To use it, meta must be True, and a dict of metadata will be created instead of a dict of records.
+    Returns:
+        picklepath (str): Path of output file.
+        """
+    return pickle_from_file(raw_file, picklepath=picklepath, cycle=cycle,
+                            states=states, sensors_file=sensors_file,
+                            postal_file=postal_file, auto=auto,
+                            id_col_heading=id_col_heading,
+                            cycle_col_heading=cycle_col_heading,
+                            cols_to_ignore=cols_to_ignore, encoding=encoding,
+                            delimiter=delimiter, quote=quote)
+
+
+def geospatial_text_to_binary(raw_file, picklepath=None,
+                              states=None, sensors_file=None,
+                              postal_file=None, auto='geospatial',
+                              id_col_heading=None, cols_to_ignore=None,
+                              encoding='UTF-8', delimiter=None,
+                              quote=None):
+    """Read delimited text file and create binary pickle file containing a dict of records. The keys are named tuples containing numeric IDs (strings) and time stamps.
+
+    See the example .csv data files at https://github.com/nickpowersys/caar.
+
+    Example sensor cycle file column headings: DeviceId, CycleType, StartTime, EndTime.
+
+    Example sensors file column headings: SensorId, TimeStamp, Degrees.
+
+    Example geospatial data file column headings LocationId, TimeStamp, Degrees.
+
+    Common delimited text file formats including commas, tabs, pipes and spaces are detected in
+    that order within the data rows (the header has its own delimiter detection and is handled separately,
+    automatically) and the first delimiter detected is used. In all cases, rows
+    are only used if the number of values match the number of column headings in the first row.
+
+    Each input file is expected to have (at least) columns representing ID's, time stamps (or
+    starting and ending time stamps for cycles), and (if not cycles) corresponding observations.
+
+    To use the automatic column detection functionality, use the keyword argument 'auto' and
+    assign it one of the values: 'cycles', 'sensors', or 'geospatial'.
+
+    The ID's should contain both letters and digits in some combination (leading zeroes are also
+    allowed in place of letters). Having the string 'id', 'Id' or 'ID' will then cause a column
+    to be the ID index within the combined ID-time stamp index for a given input file. If there
+    is no such heading, the leftmost column with alphanumeric strings (for example, 'T12' or
+    '0123') will be taken as the ID.
+
+    The output can be filtered on records from a state or set of states by specifying a
+    comma-delimited string containing state abbreviations. Otherwise, all available records
+    will be in the output.
+
+    If a state or states are specified, a sensors metadata file and postal
+    code file must be specified in the arguments and have the same location ID columns
+    and ZipCode/PostalCode column headings in the same left-to-right order as in the examples.
+    For the other columns, dummy values may be used if there is no actual data.
+
+    Args:
+        raw_file (str): The input file.
+
+        picklepath (str): The path of the desired pickle file. If it is not specified, a filename is generated automatically.
+
+        states (Optional[str]): One or more comma-separated, two-letter state abbreviations.
+
+        sensors_file (Optional[str]): Path of metadata file for sensors. Required if there is a states argument.
+
+        postal_file (Optional[str]): Metadata file for postal codes. Required if there is a states argument.
+
+        auto (Optional[Boolean]): {'cycles', 'sensors', 'geospatial', None} If one of the data types is specified, the function will detect which columns contain IDs, time stamps and values of interest automatically. If None (default), the order and headings of columns in the delimited text file and the config.ini file should match.
+
+        id_col_heading (Optional[str]): Indicates the heading in the header for the ID column.
+
+        cols_to_ignore (Optional[iterable of [str] or [int]]): Column headings or 0-based column indexes that should be left out of the output.
+
+        encoding (Optional[str]): Encoding of the raw data file. Default: 'UTF-8'.
+
+        delimiter (Optional[str]): Character to be used as row delimiter. Default is None, but commas, tabs, pipes and spaces are automatically detected in that priority order) if no delimiter is specified.
+
+        quote (Optional[str]): Characters surrounding data fields. Default is none, but double and single quotes surrounding data fields are automatically detected and removed if they are present in the data rows. If any other character is specified in the keyword argument, and it surrounds data in any column, it will be removed instead.
+
+    Returns:
+        picklepath (str): Path of output file.
+        """
+    return pickle_from_file(raw_file, picklepath=picklepath,
+                            states=states, sensors_file=sensors_file,
+                            postal_file=postal_file, auto=auto,
+                            id_col_heading=id_col_heading,
+                            cols_to_ignore=cols_to_ignore, encoding=encoding,
+                            delimiter=delimiter, quote=quote)
+
+
+def pickle_from_file(raw_file, picklepath=None, cycle=None, states=None,
+                     sensors_file=None, postal_file=None, auto=None,
+                     id_col_heading=None, cycle_col_heading=None,
+                     cols_to_ignore=None, encoding='UTF-8', delimiter=None,
+                     quote=None):
+    """Read delimited text file and create binary pickle file containing a dict of records. The keys are named tuples containing numeric IDs (strings) and time stamps.
+
+    See the example .csv data files at https://github.com/nickpowersys/caar.
+
+    Example sensor cycle file column headings: DeviceId, CycleType, StartTime, EndTime.
+
+    Example sensors file column headings: SensorId, TimeStamp, Degrees.
+
+    Example geospatial data file column headings LocationId, TimeStamp, Degrees.
+
+    Common delimited text file formats including commas, tabs, pipes and spaces are detected in
+    that order within the data rows (the header has its own delimiter detection and is handled separately,
+    automatically) and the first delimiter detected is used. In all cases, rows
+    are only used if the number of values match the number of column headings in the first row.
+
+    Each input file is expected to have (at least) columns representing ID's, time stamps (or
+    starting and ending time stamps for cycles), and (if not cycles) corresponding observations.
+
+    To use the automatic column detection functionality, use the keyword argument 'auto' and
+    assign it one of the values: 'cycles', 'sensors', or 'geospatial'.
+
+    The ID's should contain both letters and digits in some combination (leading zeroes are also
+    allowed in place of letters). Having the string 'id', 'Id' or 'ID' will then cause a column
+    to be the ID index within the combined ID-time stamp index for a given input file. If there
+    is no such heading, the leftmost column with alphanumeric strings (for example, 'T12' or
+    '0123') will be taken as the ID.
+
+    The output can be filtered on records from a state or set of states by specifying a
+    comma-delimited string containing state abbreviations. Otherwise, all available records
+    will be in the output.
+
+    If a state or states are specified, a sensors metadata file and postal
+    code file must be specified in the arguments and have the same location ID columns
+    and ZipCode/PostalCode column headings in the same left-to-right order as in the examples.
+    For the other columns, dummy values may be used if there is no actual data.
+
+    Args:
+        raw_file (str): The input file.
+
+        picklepath (str): The path of the desired pickle file. If it is not specified, a filename is generated automatically.
+
+        cycle (Optional[str]): The type of cycle that will be in the output. For example, example values that may be in the data file are either 'Cool' or 'Heat'. If left as None, all cycles will be in the output.
+
+        states (Optional[str]): One or more comma-separated, two-letter state abbreviations.
+
+        sensors_file (Optional[str]): Path of metadata file for sensors. Required if there is a states argument.
+
+        postal_file (Optional[str]): Metadata file for postal codes. Required if there is a states argument.
+
+        auto (Optional[Boolean]): {'cycles', 'sensors', 'geospatial', None} If one of the data types is specified, the function will detect which columns contain IDs, time stamps and values of interest automatically. If None (default), the order and headings of columns in the delimited text file and the config.ini file should match.
+
+        id_col_heading (Optional[str]): Indicates the heading in the header for the ID column.
+
+        cycle_col_heading (Optional[str]): Indicates the heading in the header for the cycle column.
+
+        cols_to_ignore (Optional[iterable of [str] or [int]]): Column headings or 0-based column indexes that should be left out of the output.
+
+        encoding (Optional[str]): Encoding of the raw data file. Default: 'UTF-8'.
+
+        delimiter (Optional[str]): Character to be used as row delimiter. Default is None, but commas, tabs, pipes and spaces are automatically detected in that priority order) if no delimiter is specified.
+
+        quote (Optional[str]): Characters surrounding data fields. Default is none, but double and single quotes surrounding data fields are automatically detected and removed if they are present in the data rows. If any other character is specified in the keyword argument, and it surrounds data in any column, it will be removed instead.
 
     Returns:
         picklepath (str): Path of output file.
@@ -1257,15 +1485,15 @@ def _id_col_index_for_preconfig_non_auto_file_format(header):
     return id_col_index
 
 
-def _remove_commas_from_numeric_strings(items, delimiter, quote=None):
-    for i, val in enumerate(items):
-        if ',' in val:
-            if _numeric_containing_commas(val):
-                items[i] = val.replace(',', '')
-            elif delimiter == ',' and quote:
-                items[i] = quote + val + quote
-    items = tuple(items)
-    return items
+# def _remove_commas_from_numeric_strings(items, delimiter, quote=None):
+#     for i, val in enumerate(items):
+#         if ',' in val:
+#             if _numeric_containing_commas(val):
+#                 items[i] = val.replace(',', '')
+#             elif delimiter == ',' and quote:
+#                 items[i] = quote + val + quote
+#     items = tuple(items)
+#     return items
 
 
 def _create_col_meta(header, id_other_cols, time_stamps, cols_to_ignore, cycle_col=None):

@@ -6,7 +6,7 @@ from collections import namedtuple
 
 import pandas as pd
 
-from caar.cleanthermostat import _sort_meta_in_col_order
+from caar.cleanthermostat import _sort_meta_in_col_order, dict_from_file
 
 from future import standard_library
 standard_library.install_aliases()
@@ -39,6 +39,44 @@ def create_sensors_df(dict_or_pickle_file, sensor_ids=None):
     return sensors_df
 
 
+def sensors_df_from_text(raw_file, states=None, sensors_file=None,
+                         postal_file=None, auto='sensors', id_col_heading=None,
+                         encoding='UTF-8', delimiter=None, quote=None,
+                         cols_to_ignore=None, meta=False, sensor_ids=None):
+
+    sensors = dict_from_file(raw_file, states=states,
+                             sensors_file=sensors_file,
+                             postal_file=postal_file, auto=auto,
+                             id_col_heading=id_col_heading,
+                             encoding=encoding, delimiter=delimiter,
+                             quote=quote, cols_to_ignore=cols_to_ignore,
+                             meta=meta)
+
+    return create_sensors_df(sensors, sensor_ids=sensor_ids)
+
+
+def sensors_df_from_bin(pickle_file, sensor_ids=None):
+    """Returns pandas DataFrame containing sensor ID, timestamps and
+        sensor observations.
+
+        Args:
+            pickle_file (str): The pickle file must have been created with pickle_from_file() function.
+
+            sensor_ids (Optional[list or other iterable of ints or strings]): Sensor IDs. If no argument is specified, all IDs from the first arg will be in the DataFrame.
+
+        Returns:
+            sensors_df (pandas DataFrame): DataFrame has MultiIndex based on the
+            ID(s) and timestamps.
+        """
+    fields = list(Sensor._fields)
+    multi_ids, vals, meta = _records_as_lists_of_tuples(pickle_file,
+                                                        fields, ids=sensor_ids)
+    id_labels = [meta[col]['heading'] for col in ['id', 'time']]
+    data_labels = _data_labels_from_meta(meta, id_labels)
+    sensors_df = _create_multi_index_df(id_labels, multi_ids, data_labels, vals)
+    return sensors_df
+
+
 def create_cycles_df(dict_or_pickle_file, device_ids=None):
     """Returns pandas DataFrame containing sensor ids and cycle beginning
     timestamps as multi-part indexes, and cycle ending times as values.
@@ -60,6 +98,43 @@ def create_cycles_df(dict_or_pickle_file, device_ids=None):
     return cycles_df
 
 
+def cycles_df_from_text(raw_file, cycle=None, states=None, postal_file=None,
+                        auto='cycles', id_col_heading=None, cycle_col_heading=None,
+                        encoding='UTF-8', delimiter=None, quote=None,
+                        cols_to_ignore=None, meta=False, device_ids=None):
+
+    cycles = dict_from_file(raw_file, cycle=cycle, states=states,
+                            postal_file=postal_file, auto=auto,
+                            id_col_heading=id_col_heading,
+                            cycle_col_heading=cycle_col_heading,
+                            encoding=encoding, delimiter=delimiter,
+                            quote=quote, cols_to_ignore=cols_to_ignore,
+                            meta=meta)
+
+    return create_cycles_df(cycles, device_ids=device_ids)
+
+
+def cycles_df_from_bin(pickle_file, device_ids=None):
+    """Returns pandas DataFrame containing sensor ids and cycle beginning
+        timestamps as multi-part indexes, and cycle ending times as values.
+
+        Args:
+            pickle_file (dict or str): Must have been created with dict_from_file() or pickle_from_file() function.
+
+            device_ids (Optional[list or other iterable of ints or strings]): Sensor IDs. If no  argument is specified, all IDs from the first arg will be in the DataFrame.
+
+        Returns:
+            cycles_df (pandas DataFrame): DataFrame has MultiIndex based on the ID(s) and timestamps.
+        """
+    multi_ids, vals, meta = _records_as_lists_of_tuples(pickle_file,
+                                                        list(Cycle._fields),
+                                                        ids=device_ids)
+    id_labels = [meta[col]['heading'] for col in ['id', 'cycle', 'start_time']]
+    data_labels = _data_labels_from_meta(meta, id_labels)
+    cycles_df = _create_multi_index_df(id_labels, multi_ids, data_labels, vals)
+    return cycles_df
+
+
 def create_geospatial_df(dict_or_pickle_file, location_ids=None):
     """Returns pandas DataFrame containing records with location IDs and time
     stamps as multi-part indexes and outdoor temperatures as values.
@@ -72,8 +147,45 @@ def create_geospatial_df(dict_or_pickle_file, location_ids=None):
     Returns:
         geospatial_df (pandas DataFrame): DataFrame has MultiIndex based on the ID(s) and timestamps.
     """
+    fields = list(Geospatial._fields)
     multi_ids, vals, meta = _records_as_lists_of_tuples(dict_or_pickle_file,
-                                                        list(Geospatial._fields),
+                                                        fields,
+                                                        ids=location_ids)
+    id_labels = [meta[col]['heading'] for col in ['id', 'time']]
+    data_labels = _data_labels_from_meta(meta, id_labels)
+    geospatial_df = _create_multi_index_df(id_labels, multi_ids, data_labels, vals)
+    return geospatial_df
+
+
+def geospatial_df_from_text(raw_file, states=None, sensors_file=None,
+                            postal_file=None, auto='geospatial',
+                            id_col_heading=None, encoding='UTF-8',
+                            delimiter=None, quote=None, cols_to_ignore=None,
+                            meta=False, location_ids=None):
+
+    geos = dict_from_file(raw_file, states=states, sensors_file=sensors_file,
+                          postal_file=postal_file, auto=auto,
+                          id_col_heading=id_col_heading,
+                          encoding=encoding, delimiter=delimiter, quote=quote,
+                          cols_to_ignore=cols_to_ignore, meta=meta)
+
+    return create_geospatial_df(geos, locations_ids=location_ids)
+
+
+def geospatial_df_from_bin(pickle_file, location_ids=None):
+    """Returns pandas DataFrame containing records with location IDs and time
+    stamps as multi-part indexes and outdoor temperatures as values.
+
+    Args:
+        pickle_file (str): Must have been created with pickle_from_file() function.
+
+        location_ids (Optional[list or other iterable of ints or strings]): Location IDs. If no argument is specified, all IDs from the first arg will be in the DataFrame.
+
+    Returns:
+        geospatial_df (pandas DataFrame): DataFrame has MultiIndex based on the ID(s) and timestamps.
+    """
+    fields = list(Geospatial._fields)
+    multi_ids, vals, meta = _records_as_lists_of_tuples(pickle_file, fields,
                                                         ids=location_ids)
     id_labels = [meta[col]['heading'] for col in ['id', 'time']]
     data_labels = _data_labels_from_meta(meta, id_labels)
