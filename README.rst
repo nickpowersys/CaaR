@@ -14,7 +14,7 @@ Note the need for metadata files for both thermostats and zip codes, if matching
 Motivation
 ==========
 
-This project’s intent is to accelerate analysis of time-stamped data at the device level as well as associated data from other sources if applicable. It does this by putting observations into an indexed form that can be summarized in aggregated form and at the device level. It supports visualization in time series form
+This project’s intent is to accelerate analysis of time-stamped data at the device level as well as associated data from other sources if applicable. It does this by putting observations into an indexed form that can be summarized in aggregated form and at the device level. It supports visualization in time series form.
 
 It may be used for general scientific research that aims to 1) index time stamped data in general from large text files, and 2) use pandas and NumPy.
 
