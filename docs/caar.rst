@@ -1,8 +1,5 @@
-caar package
-============
-
-Submodules
-----------
+caar API
+========
 
 caar.cleanthermostat module
 ---------------------------

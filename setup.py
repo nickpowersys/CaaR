@@ -2,6 +2,8 @@ import setuptools
 from setuptools import find_packages, setup
 import sys
 
+from caar import __version__
+
 INSTALL_REQUIRES = [
     'future',
     'numpy',
@@ -20,7 +22,7 @@ else:
 
 setup(
     name='caar',
-    version='5.2.0-beta',
+    version=__version__,
     url='http://github.com/nickpowersys/CaaR/',
     license='BSD 3-Clause License',
     author='Nicholas A. Brown',

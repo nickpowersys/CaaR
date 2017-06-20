@@ -1,3 +1,5 @@
+__version__ = '5.2.0-beta'
+
 from caar.cleanthermostat import columns_summary
 from caar.cleanthermostat import cycles_text_to_binary
 from caar.cleanthermostat import dict_from_file

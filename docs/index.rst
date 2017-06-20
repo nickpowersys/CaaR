@@ -3,21 +3,22 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to the CaaR documentation!
-==================================
+CaaR Documentation
+==================
 
 Contents:
 
 .. toctree::
    :maxdepth: 4
 
+   intro.rst
+
    caar.rst
 
 
-Indices and tables
-==================
+Index
+=====
 
 * :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+
 
