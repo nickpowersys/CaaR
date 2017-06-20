@@ -19,7 +19,7 @@ from sphinx.apidoc import main
 
 import unittest.mock
  
-MOCK_MODULES = ['numpy', 'future', 'py', 'pytest', 'click', 'pandas', 'pandas.compat']
+MOCK_MODULES = ['numpy', 'future', 'py', 'pytest', 'click', 'pandas', 'pandas.compat', 'plantweb']
 for mod_name in MOCK_MODULES:
     sys.modules[mod_name] = unittest.mock.Mock()
 
